@@ -8,16 +8,18 @@ email: luigi.belcastro@liu.se
 Geometry objects used in the Monte Carlo code
 """
 import numpy as np
+from MCPhaseFun import HenyeyGreenstein as HG
 
 class Layer:
     """Base geometry class, to subclass"""
-    def __init__(self, n=1.4, mua=0, mus=1, order=0, num=0, **kwargs):
+    def __init__(self, n=1.4, mua=0, mus=1, order=0, num=0, phase=HG(g=0.8), **kwargs):
         """Defaults to white Monte Carlo with n = 1.4"""
         self.n = n  # refractive index
         self.mua = mua  # absorption coefficient
         self.mus = mus  # scattering coefficient
         self.order = order  # priority of the layer (0 = lowest). Should be unique
         self.number = num  # layer identification number. Should be unique
+        self.phaseFunction = phase  #  instance of PhaseFunction object
         self.color = kwargs.get('color', 'white')  # Used for graphical representation
         self.detect = kwargs.get('detect', '')  # Used to define detector layers
     
@@ -42,6 +44,22 @@ class Layer:
         """
         pass
     
+    def incident(self, photon):
+        """
+        Calculate the incident angle of a photon to the surface boundary.
+
+        Parameters
+        ----------
+        photon : Photon object
+            An instance of the Photon class
+
+        Returns
+        -------
+        ai : FLOAT
+            incident angle in radians
+        """
+        pass
+      
     def intersect(self, photon):
         """
         Calculate the intersection between the photon path and the tissue boundary.
@@ -61,9 +79,9 @@ class Layer:
     
 class Infinite(Layer):
     """Special infinite geometry for surrounding tissue"""
-    def __init__(self, n=1, mua=0, mus=0):
+    def __init__(self, **kwargs):
         """Defaults to Air layer"""
-        super().__init__(n, mua, mus)
+        super().__init__(**kwargs)
         self.type = 'infinite'
     
     def is_inside(self, coord):
@@ -86,6 +104,22 @@ class Infinite(Layer):
         """
         return np.inf  # there is no boundary
     
+    def incident(self, photon):
+        """
+        Calculate the incident angle of a photon to the surface boundary.
+
+        Parameters
+        ----------
+        photon : Photon object
+            An instance of the Photon class
+
+        Returns
+        -------
+        ai : FLOAT
+            incident angle in radians
+        """
+        return None
+        
     def intersect(self, photon):
         """
         Calculate the intersection between the photon path and the tissue boundary.
@@ -105,8 +139,8 @@ class Infinite(Layer):
     
 class Slab(Layer):
     """Horizontal slab of tissue, laying in the xy plane"""
-    def __init__(self, top=0, thick=1):
-        super().__init__()
+    def __init__(self, top=0, thick=1, **kwargs):
+        super().__init__(**kwargs)
         self.type = 'slab'
         self.thickness = thick  # thickness in mm
         self.top = top  # position of the top of the layer in the z axis
@@ -154,6 +188,43 @@ class Slab(Layer):
             dist = np.inf
         return dist
     
+    def incident(self, photon):
+        """
+        Calculate the incident angle of a photon to the surface boundary.
+
+        Parameters
+        ----------
+        photon : Photon object
+            An instance of the Photon class
+
+        Returns
+        -------
+        ai : FLOAT
+            incident angle in radians
+        """
+        ai = np.arccos(np.abs(photon.direction[2]))  # incidence angle
+        return ai
+    
+    def normal(self, coord):
+        """
+        Calculate the normal vector to the boundary at coordinates coord
+
+        Parameters
+        ----------
+        coord : FLOAT ARRAY
+            Coordinates where to calculate the normal vector
+
+        Returns
+        -------
+        norm : FLOAT ARRAY
+            unit vector of the surface normal
+        """
+        if coord[2] == self.top or coord[2] == self.top+self.thickness:
+            norm = np.array([0,0,1])
+        else:
+            norm = None
+        return norm
+    
     def intersect(self, photon):
         """
         Calculate the intersection between the photon path and the tissue boundary.
@@ -170,7 +241,7 @@ class Slab(Layer):
         """
         # Sanity check: distance < stepsize
         dist = self.distance(photon)
-        if dist < photon.step:
+        if dist < photon.step_size:
             if photon.direction[2] < 0:  # if directed toward negative z
                 intersect = np.array([
                     photon.coordinates[0] + dist * photon.direction[0],  # x coordinate
