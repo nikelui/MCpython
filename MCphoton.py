@@ -8,6 +8,7 @@ email: luigi.belcastro@liu.se
 Class to represent photon packets
 """
 import numpy as np
+from operator import attrgetter  # used to find maximum attribute
 
 class Photon:
     """Class to represent photon packets"""
@@ -35,7 +36,7 @@ class Photon:
         step : FLOAT
             step size in mm
         """
-        step = np.log(np.random.rand()) / (tissue.mua + tissue.mus)
+        step = -np.log(np.random.rand()) / (tissue.mua + tissue.mus)
         return step
     
     def absorb(self, tissue):
@@ -118,22 +119,23 @@ class Photon:
         tissue1 : LAYER OBJECT
             An instance of the Layer class representing the current tissue layer.
         tissue2 : LAYER OBJECT
-            An instance of the Layer class representing the current tissue layer.
+            An instance of the Layer class representing the incident tissue layer.
 
         Returns
         -------
         mode : STRING
             Either 'reflect' or 'transmit'
         """
-        ai = tissue2.incident(self)
-        at = np.arcsin(tissue1.n/tissue2.n * np.sin(ai))  # Snell law, transmission angle
+        top_layer = max((tissue1, tissue2), key=attrgetter('order'))  # find top layer
+        ai = top_layer.incident(self)
         # Check for total internal reflection
         if tissue1.n > tissue2.n and ai > np.arcsin(tissue2.n/tissue1.n):
             Ri = 1  # internal reflection
         else:
-            Ri = 0.5*( np.sin(ai-at)**2/np.sin(ai+at)**2 + np.tan(ai-at)**2/np.tan(ai+at)**2 )
+            at = np.arcsin(tissue1.n/tissue2.n * np.sin(ai))  # Snell law, transmission angle
+            Ri = 0.5*( np.sin(ai-at)**2/np.sin(ai+at)**2 + np.tan(ai-at)**2/np.tan(ai+at)**2 ) 
         # Randomly determine if reflect or transmit
-        norm = tissue2.normal(self.coordinates)  # assume the photon is on the boundary
+        norm = top_layer.normal(self.coordinates)  # assume the photon is on the boundary
         if np.random.rand() <= Ri:  # reflect
             new_dir = -2*norm * self.direction + self.direction
             mode = 'reflect'
