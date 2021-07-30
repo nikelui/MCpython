@@ -8,14 +8,14 @@ email: luigi.belcastro@liu.se
 Main script to run for iterating
 """
 import numpy as np
-from matplotlib import pyplot as plt
 from MCphoton import Photon
 from MClayers import Slab, Infinite  #TODO: make imports dynamic
 from MCPhaseFun import HenyeyGreenstein as HG
+from MCgui import Geometries
 
 # TODO: read parameters and tissues from file
 param = {}
-param['photons_launched'] = 10
+param['photons_launched'] = 1000
 param['photons_detected'] = 0
 param['weigth_threshold'] = 0.1
 param['roulette_weigth'] = 10
@@ -23,7 +23,7 @@ param['roulette_weigth'] = 10
 # Define tissue list
 tissues = [
     Infinite(n=1, mua=0., mus=0., order=0, num=0, color='cyan', detect='impinge'),
-    Slab(n=1.4, mua=0.05, mus=20, order=1, num=1, phase=HG(g=0.8), top=0, thick=100, color='orange')
+    Slab(n=1.4, mua=0.5, mus=5, order=1, num=1, phase=HG(g=0.8), top=0, thick=10, color='orange')
     ]
 tissues.sort(key=lambda x: x.order, reverse=True)  # sort high to low
 
@@ -105,4 +105,8 @@ while p_l < param['photons_launched'] and p_d < param['photons_detected']:
                     incident_layer = None
                     ph.coordinates += ds*ph.direction
     debug.append(ph)
-    
+
+
+gg = Geometries(tissues)
+ax = gg.showGeometry()
+gg.showPaths(ax, detected, linewidth=0.3)

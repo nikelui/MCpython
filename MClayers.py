@@ -219,10 +219,11 @@ class Slab(Layer):
         norm : FLOAT ARRAY
             unit vector of the surface normal
         """
-        if coord[2] == self.top or coord[2] == self.top+self.thickness:
-            norm = np.array([0,0,1])
-        else:
-            norm = None
+        # if np.abs(coord[2] - self.top) < 1e-3 or np.abs(coord[2] - self.top+self.thickness) < 1e-3:
+        #     norm = np.array([0,0,1])
+        # else:
+        #     norm = None
+        norm = np.array([0,0,1])
         return norm
     
     def intersect(self, photon):
