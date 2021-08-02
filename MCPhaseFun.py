@@ -46,7 +46,7 @@ class HenyeyGreenstein(PhaseFunction):
         
         g = self.g  # for convenience
         if g != 0:
-            cos_theta = (1 + g**2 - ((1-g**2) / (1-g+2*g*np.random.rand()))**2) / 2*g  # HG
+            cos_theta = (1 + g**2 - ((1-g**2) / (1-g+2*g*np.random.rand()))**2) / (2*g)  # HG
         else:
             cos_theta = 2*np.random.rand() - 1  # g = 0 -> isotropical scattering
         theta = np.arccos(cos_theta)

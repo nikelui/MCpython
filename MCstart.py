@@ -8,6 +8,7 @@ email: luigi.belcastro@liu.se
 Main script to run for iterating
 """
 import numpy as np
+from datetime import datetime
 from MCphoton import Photon
 from MClayers import Slab, Infinite  #TODO: make imports dynamic
 from MCPhaseFun import HenyeyGreenstein as HG
@@ -15,7 +16,7 @@ from MCgui import Geometries
 
 # TODO: read parameters and tissues from file
 param = {}
-param['photons_launched'] = 1000
+param['photons_launched'] = 1e5
 param['photons_detected'] = 0
 param['weigth_threshold'] = 0.1
 param['roulette_weigth'] = 10
@@ -23,7 +24,7 @@ param['roulette_weigth'] = 10
 # Define tissue list
 tissues = [
     Infinite(n=1, mua=0., mus=0., order=0, num=0, color='cyan', detect='impinge'),
-    Slab(n=1.4, mua=0.5, mus=5, order=1, num=1, phase=HG(g=0.8), top=0, thick=10, color='orange')
+    Slab(n=1.4, mua=0.2, mus=5, order=1, num=1, phase=HG(g=0), top=0, thick=10, color='orange')
     ]
 tissues.sort(key=lambda x: x.order, reverse=True)  # sort high to low
 
@@ -40,7 +41,10 @@ if param['photons_detected'] == 0:
    param['photons_detected'] = np.inf  # if zero, continue launching photons until stopped
 if param['photons_launched'] == 0:
    param['photons_launched'] = np.inf
-   
+
+# measure elapsed time
+start = datetime.now()
+
 while p_l < param['photons_launched'] and p_d < param['photons_detected']:
     # First step
     current_layer = tissues[1]  #TODO: define a way to detect outer layer and first layer (e.g. coordinates)
@@ -75,7 +79,8 @@ while p_l < param['photons_launched'] and p_d < param['photons_detected']:
             ph.coordinates += step*ph.direction  # move photon
             ph.path.append(ph.coordinates.copy())  # add to path
             dw = ph.absorb(current_layer)  # update weigth
-            absorbed.append(np.concatenate([ph.coordinates.copy(),[dw]]))  # save absorbed
+            if dw > 1e-6:  # only save if absorption is happening
+                absorbed.append(np.concatenate([ph.coordinates.copy(),[dw]]))  # save absorbed
             
             if ph.weigth < param['weigth_threshold']:
                 ph.roulette(param['roulette_weigth'])  # kill the photon or increase weigth
@@ -106,7 +111,12 @@ while p_l < param['photons_launched'] and p_d < param['photons_detected']:
                     ph.coordinates += ds*ph.direction
     debug.append(ph)
 
+stop = datetime.now()
+
+print('Elapsed time: {}'.format(str(stop-start)))
 
 gg = Geometries(tissues)
-ax = gg.showGeometry()
-gg.showPaths(ax, detected, linewidth=0.3)
+ax = gg.showGeometry(xlim=[-10, 10], zlim=[-10,10])
+gg.showPaths(ax, detected, N=100, linewidth=0.3)
+
+asd = gg.showAbsorbed(absorbed)
