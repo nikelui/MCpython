@@ -12,6 +12,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 import MClayers
+from MCPhaseFun import HenyeyGreenstein as HG  # debug
 
 def find_closest(x,y,X,Y):
     """Return indices of closest value on 2D coordinates grid"""
@@ -133,11 +134,74 @@ class Geometries:
         plt.pcolormesh(x, z, weights, cmap='magma', norm=norm, shading='auto')
         plt.xlabel('mm')
         plt.ylabel('mm')
-        plt.gca().invert_yaxis()
+        plt.gca().invert_yaxis()  # z axis is directed downwards
         plt.colorbar()
         plt.tight_layout()
     
+
+def phaseFunPlot(phase, N=1e6):
+    """
+    Debug function, simulates and plots angular distribution of Phase Function
+
+    Parameters
+    ----------
+    p : PHASEFUNCTION Object
+        Instance of PhaseFunction class
+    N : INT, optional
+        Number of events to simulate. The default is 1e6.
+
+    Returns
+    -------
+    None.
+    """
+    theta = []
+    phi = []
+    for i in range(N):
+        t,p = phase.getAngles()
+        theta.append(t)
+        phi.append(p)
     
+    theta_hist = np.histogram(theta, bins=180//2, range=(0, np.pi))
+    phi_hist = np.histogram(phi, bins=360//2, range=(0, 2*np.pi))  # count angle occurrences
+    
+    # import pdb; pdb.set_trace()
+    if plt.fignum_exists(696):  # For multiple plots
+        fig = plt.gcf()
+        ax = fig.axes
+    else:
+        fig,ax = plt.subplots(nrows=1, ncols=2, num=696, figsize=(10,5), subplot_kw={'projection': 'polar'})
+    ax[0].plot(theta_hist[1][:-1], theta_hist[0], label='g={}'.format(phase.g))
+    ax[0].set_title('Theta')
+    ax[0].legend(loc='lower center', bbox_to_anchor=(0,-0.2))
+    ax[0].set_rscale('symlog')
+    ax[0].grid(True, linestyle=':')
+    ax[1].plot(phi_hist[1][:-1], phi_hist[0], label='g={}'.format(phase.g))
+    ax[1].set_title('Phi')
+    ax[1].legend(loc='lower center', bbox_to_anchor=(0,-0.2))
+    # ax[1].set_yscale('log')
+    ax[1].grid(True, linestyle=':')
+    plt.tight_layout()
+    
+    # return (theta, theta_hist)
+
+# # DEBUG stuff here
+# def hg(g,theta):
+#         p = ((1-g[:,np.newaxis]**2)/(1+g[:,np.newaxis]**2-2*g[:,np.newaxis]*np.cos(theta))**(3/2))/(4*np.pi)
+#         return p
+
 if __name__ == '__main__':
-    g = Geometries()
-    g.showGeometry()
+    g = np.array([0., .25, .5, .75, .95])
+    # g = np.array([0, 0.5, 0.8])
+    phase = [HG(g=x) for x in g]  # list of p
+    
+    for p in phase:
+        phaseFunPlot(p, N=int(1e7))
+    
+    # alpha = np.arange(360)/180*np.pi
+    # ph = hg(g, alpha)
+    # plt.figure(2)
+    # plt.polar(alpha, ph.T/np.max(ph.T,axis=0))
+    # plt.gca().set_rscale('symlog')
+    
+    
+    
