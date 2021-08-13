@@ -24,7 +24,7 @@ param['roulette_weigth'] = 10
 # Define tissue list
 tissues = [
     Infinite(n=1, mua=0., mus=0., order=0, num=0, color='cyan', detect='impinge'),
-    Slab(n=1.4, mua=0.2, mus=5, order=1, num=1, phase=HG(g=0), top=0, thick=10, color='orange')
+    Slab(n=1.4, mua=0.2, mus=5, order=1, num=1, phase=HG(g=0), top=0, thick=100, color='orange')
     ]
 tissues.sort(key=lambda x: x.order, reverse=True)  # sort high to low
 
@@ -116,7 +116,9 @@ stop = datetime.now()
 print('Elapsed time: {}'.format(str(stop-start)))
 
 gg = Geometries(tissues)
-ax = gg.showGeometry(xlim=[-10, 10], zlim=[-10,10])
-gg.showPaths(ax, detected, N=100, linewidth=0.3)
+ax = gg.showGeometry(xlim=[-2, 2], zlim=[-2, 2])
+# gg.showPaths(ax, detected, N=1000, linewidth=0.5)
+
+gg.animatePath(ax, detected, M=50)
 
 asd = gg.showAbsorbed(absorbed)

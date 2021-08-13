@@ -8,6 +8,7 @@ email: luigi.belcastro@liu.se
 Classes for graphical representation of MC simulation (Tissues geometry, photon paths...)
 and post-processing data visualization
 """
+import time
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
@@ -64,7 +65,7 @@ class Geometries:
         -------
         ax : MATPLOTLIB AXIS OBJECT
         """
-        plt.figure(1, figsize=(10,8))
+        plt.figure(num=1, figsize=(10,8))
         ax = plt.gca()
         for tissue in self.tissues[::-1]:  # draw tissues from the lowest
             if type(tissue) is MClayers.Infinite:  # outside tissue
@@ -82,7 +83,6 @@ class Geometries:
         ax.invert_yaxis()
         plt.tight_layout()
         plt.show()
-        
         return ax  # useful for other plots
     
     def showPaths(self, ax, photons, N=100, **kwargs):
@@ -91,11 +91,9 @@ class Geometries:
 
         Parameters
         ----------
-        ax : MATPLOTLIB AXIS OBJECT
-        
+        ax : MATPLOTLIB AXIS OBJECT     
         photons : LIST of simulated PHOTON OBJECTS
             Results of the simulation, with scattering paths
-        
         N : INT
             number of photon paths to draw(first N)
         
@@ -106,8 +104,45 @@ class Geometries:
         linewidth = kwargs.get('linewidth', 1)
         for photon in photons[:N]:
             photonPath = np.array([[x[0] for x in photon.path], [x[2] for x in photon.path]])
-            ax.plot(photonPath[0], photonPath[1], linewidth=linewidth, linestyle='-', color='yellow')
-            
+            ax.plot(photonPath[0], photonPath[1], linewidth=linewidth, linestyle='-', color='yellow', alpha=0.3)
+    
+    def animatePath(self, ax, photons, N=100, M=20, **kwargs):
+        """
+        Plot the photon paths and highlignt the first M
+
+        Parameters
+        ----------
+        ax : MATPLOTLIB AXIS OBJECT
+        photons : LIST of simulated PHOTON OBJECTS
+            Results of the simulation, with scattering paths.
+        N : INT, optional
+            number of photon paths to draw(first N). The default is 100
+        M : INT, optional
+            The nuber of photons to highlight. The default is 20.
+        **kwargs : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+        """
+        linewidth = kwargs.get('linewidth', 1)
+        # First plot path
+        for photon in photons[:N]:
+            photonPath = np.array([[x[0] for x in photon.path], [x[2] for x in photon.path]])
+            ax.plot(photonPath[0], photonPath[1], linewidth=linewidth, linestyle='-', color='yellow', alpha=0.3)
+        # Now do the animation       
+        photonPath = np.array([[x[0] for x in photons[0].path], [x[2] for x in photons[0].path]])
+        current = ax.plot(photonPath[0], photonPath[1], linewidth=2,
+                          linestyle='-',color='red')  # first one
+        for _i, photon in enumerate(photons[1:M]):
+            time.sleep(0.5)
+            photonPath = np.array([[x[0] for x in photon.path], [x[2] for x in photon.path]])
+            current[0].set_xdata(photonPath[0])
+            current[0].set_ydata(photonPath[1])
+            plt.draw()
+            plt.pause(0.001)
+    
     def showAbsorbed(self, absorbed, xlim=[-10,10], zlim=[-10,10]):
         """
         Show colormap with photon absorption
@@ -131,6 +166,7 @@ class Geometries:
             weights[zi, xi] += point[3]  # add weigth to grid
         
         norm = LogNorm(vmin=1e-3, vmax=weights.max())
+        plt.figure(num=2)
         plt.pcolormesh(x, z, weights, cmap='magma', norm=norm, shading='auto')
         plt.xlabel('mm')
         plt.ylabel('mm')
