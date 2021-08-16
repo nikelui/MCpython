@@ -20,7 +20,6 @@ class Photon:
         self.step_size = 0  # step size (in mm). Update at every iteration
         self.scatters = 0  # number of scattering events
         self.path = []  # to store photon path
-        # self.layer = 0  # to keep track of the current tissue layer
     
     def step(self, tissue):
         """
@@ -88,8 +87,8 @@ class Photon:
                 np.sin(theta)*np.sin(phi),  # muy
                 np.cos(theta)               # muz
                 ])
-        
-        # if np.abs(muz) < 0.9999:
+        # OLD approach
+        # # if np.abs(muz) < 0.9999:
         #     new_dir = np.array([
         #         np.sin(theta)/np.sqrt(1-muz**2) * (mux*muz*np.cos(phi) - muy*np.sin(phi)) + mux*np.cos(theta),  # mux'
         #         np.sin(theta)/np.sqrt(1-muz**2) * (muy*muz*np.cos(phi) - mux*np.sin(phi)) + muy*np.cos(theta),  # muy'
@@ -184,3 +183,21 @@ class Photon:
         else:  # the photon is terminated
             self.dead = True
         return
+    
+    def find_layer(self, tissues):
+        """
+        Find the index of the current layer.
+        
+        Parameters
+        ----------
+        tissues : LIST of LAYER objects
+            An ordered list that contains the geometry
+
+        Returns
+        -------
+        idx : INT
+            index of the current layer
+        """
+        for idx, tissue in enumerate(tissues):
+            if tissue.is_inside(self.coordinates):
+                return idx  # should stop at the first true value

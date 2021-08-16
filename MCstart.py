@@ -24,7 +24,8 @@ param['roulette_weigth'] = 10
 # Define tissue list
 tissues = [
     Infinite(n=1, mua=0., mus=0., order=0, num=0, color='cyan', detect='impinge'),
-    Slab(n=1.4, mua=0.2, mus=5, order=1, num=1, phase=HG(g=0.8), top=0, thick=100, color='orange')
+    Slab(n=1.4, mua=0.2, mus=5, order=1, num=1, phase=HG(g=0.8), top=0, thick=100, color='orange'),
+    Slab(n=1.4, mua=0.2, mus=5, order=2, num=2, phase=HG(g=0.8), top=0, thick=0.2, color='chocolate')
     ]
 tissues.sort(key=lambda x: x.order, reverse=True)  # sort high to low
 
@@ -47,11 +48,18 @@ start = datetime.now()
 
 while p_l < param['photons_launched'] and p_d < param['photons_detected']:
     # First step
-    current_layer = tissues[1]  #TODO: define a way to detect outer layer and first layer (e.g. coordinates)
-    incident_layer = tissues[0]
     p_l += 1  # increase photon counter
     ph = Photon()
     ph.path.append(ph.coordinates.copy())  # starting position
+    # Detect initial layer and outer layer
+    ph.coordinates -= np.array([0, 0, 1e-3])  # move slightly up    
+    current_layer_id = ph.find_layer(tissues)
+    ph.coordinates += np.array([0, 0, 1e-3])  # restore initial coordinates
+    incident_layer_id = ph.find_layer(tissues)
+    
+    current_layer = tissues[current_layer_id]
+    incident_layer = tissues[incident_layer_id]
+    
     ph.specular(current_layer, incident_layer)  # specular reflection
     current_layer = incident_layer  # move inside first layer
     # ph.layer = current_layer.number  # to keep track of layer. Is it really needed?
@@ -62,19 +70,14 @@ while p_l < param['photons_launched'] and p_d < param['photons_detected']:
         ph.step_size = step
         # check if photons hits any boundary
         for tissue in tissues:
-            disc = ph.coordinates  # DEBUG
-            disd = ph.direction  # DEBUG
-            diss = ph.step_size  # DEBUG
             dist = tissue.distance(ph)
             if dist < step:
                 # need to find new tissue here
-                new_coord = ph.coordinates + step*ph.direction
-                for layer in tissues:
-                    if layer.is_inside(new_coord):
-                        incident_layer = layer
-                        break  # exit inner layers loop
-                break  # exit outer tissues loop
-        
+                ph.coordinates += step*ph.direction  # move photon
+                incident_layer_id = ph.find_layer(tissues)
+                ph.coordinates -= step*ph.direction  # restore coordinates
+                incident_layer = tissues[incident_layer_id]
+                
         if incident_layer is None:  # Not crossed boundary
             ph.coordinates += step*ph.direction  # move photon
             ph.path.append(ph.coordinates.copy())  # add to path
@@ -103,14 +106,14 @@ while p_l < param['photons_launched'] and p_d < param['photons_detected']:
                     ph.dead = True
                     p_d += 1
                     detected.append(ph)  # save whole photon
+                    incident_layer = None
                     continue  # do not move further                             
                 else:
                     ds *= (current_layer.mua + current_layer.mus) / (incident_layer.mua + incident_layer.mus)  # update step
                     ph.coordinates += ds*ph.direction  # move remaining of step
                     ph.path.append(ph.coordinates.copy())  # add to path
                     current_layer = incident_layer
-                    incident_layer = None
-                incident_layer = None  # change at the end, otherwise the if does not work
+                    incident_layer = None           
     debug.append(ph)
 
 stop = datetime.now()
@@ -119,8 +122,8 @@ print('Elapsed time: {}'.format(str(stop-start)))
 
 gg = Geometries(tissues)
 ax = gg.showGeometry(xlim=[-2, 2], zlim=[-2, 2])
-# gg.showPaths(ax, detected, N=1000, linewidth=0.5)
+gg.showPaths(ax, debug, N=5000, linewidth=0.5)
 
-gg.animatePath(ax, detected, N=500, M=50)
+# gg.animatePath(ax, debug, N=500, M=50)
 
 # asd = gg.showAbsorbed(absorbed)
