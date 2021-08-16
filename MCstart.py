@@ -16,7 +16,7 @@ from MCgui import Geometries
 
 # TODO: read parameters and tissues from file
 param = {}
-param['photons_launched'] = 1e5
+param['photons_launched'] = 1e4
 param['photons_detected'] = 0
 param['weigth_threshold'] = 0.1
 param['roulette_weigth'] = 10
@@ -24,7 +24,7 @@ param['roulette_weigth'] = 10
 # Define tissue list
 tissues = [
     Infinite(n=1, mua=0., mus=0., order=0, num=0, color='cyan', detect='impinge'),
-    Slab(n=1.4, mua=0.2, mus=5, order=1, num=1, phase=HG(g=0), top=0, thick=100, color='orange')
+    Slab(n=1.4, mua=0.2, mus=5, order=1, num=1, phase=HG(g=0.8), top=0, thick=100, color='orange')
     ]
 tissues.sort(key=lambda x: x.order, reverse=True)  # sort high to low
 
@@ -99,16 +99,18 @@ while p_l < param['photons_launched'] and p_d < param['photons_detected']:
                 ph.coordinates += ds*ph.direction
                 ph.path.append(ph.coordinates.copy())  # add to path
             elif mode == 'transmit':
-                if incident_layer.detect:  #TODO: implement detection of absorbed photons
+                if incident_layer.detect:
                     ph.dead = True
                     p_d += 1
                     detected.append(ph)  # save whole photon
-                    
-                else:    
-                    ds *= (current_layer.mua + current_layer.mus) / (incident_layer.mua + incident_layer.mus)  # update step                
+                    continue  # do not move further                             
+                else:
+                    ds *= (current_layer.mua + current_layer.mus) / (incident_layer.mua + incident_layer.mus)  # update step
+                    ph.coordinates += ds*ph.direction  # move remaining of step
+                    ph.path.append(ph.coordinates.copy())  # add to path
                     current_layer = incident_layer
                     incident_layer = None
-                    ph.coordinates += ds*ph.direction
+                incident_layer = None  # change at the end, otherwise the if does not work
     debug.append(ph)
 
 stop = datetime.now()
@@ -119,6 +121,6 @@ gg = Geometries(tissues)
 ax = gg.showGeometry(xlim=[-2, 2], zlim=[-2, 2])
 # gg.showPaths(ax, detected, N=1000, linewidth=0.5)
 
-gg.animatePath(ax, detected, M=50)
+gg.animatePath(ax, detected, N=500, M=50)
 
-asd = gg.showAbsorbed(absorbed)
+# asd = gg.showAbsorbed(absorbed)

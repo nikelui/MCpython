@@ -76,11 +76,25 @@ class Photon:
         mux, muy, muz = self.direction  # unpack components for convenience
         
         if np.abs(muz) < 0.9999:
+            ## NEW approach
+            # convert old direction cosines to angles
+            old_theta = np.arccos(self.direction[2])  # muz = cos(theta)
+            old_phi = np.arcsin(self.direction[1]/np.sin(old_theta))
+            theta += old_theta  # update directions
+            phi += old_phi
+            # convert to director cosines again
             new_dir = np.array([
-                np.sin(theta)/np.sqrt(1-muz**2) * (mux*muz*np.cos(phi) - muy*np.sin(phi)) + mux*np.cos(theta),  # mux'
-                np.sin(theta)/np.sqrt(1-muz**2) * (muy*muz*np.cos(phi) - mux*np.sin(phi)) + muy*np.cos(theta),  # muy'
-                -np.sin(theta)*np.cos(theta)*np.sqrt(1-muz**2) + muz*np.cos(theta)                              # muz'
+                np.sin(theta)*np.cos(phi),  # mux
+                np.sin(theta)*np.sin(phi),  # muy
+                np.cos(theta)               # muz
                 ])
+        
+        # if np.abs(muz) < 0.9999:
+        #     new_dir = np.array([
+        #         np.sin(theta)/np.sqrt(1-muz**2) * (mux*muz*np.cos(phi) - muy*np.sin(phi)) + mux*np.cos(theta),  # mux'
+        #         np.sin(theta)/np.sqrt(1-muz**2) * (muy*muz*np.cos(phi) - mux*np.sin(phi)) + muy*np.cos(theta),  # muy'
+        #         -np.sin(theta)*np.cos(theta)*np.sqrt(1-muz**2) + muz*np.cos(theta)                              # muz'
+        #         ])
         else:  # use this to avoid division by zero
             new_dir = np.array([
                 np.sin(theta)*np.cos(phi),    # mux
@@ -141,12 +155,12 @@ class Photon:
             mode = 'reflect'
         else:  # transmit
             # DEBUG, for now ignore this
-            # k = np.sqrt(1 - tissue1.n**2/tissue2.n**2 * (1 - np.cos(ai)**2) - tissue1.n/tissue2.n * np.cos(ai))
-            # new_dir = k*norm + self.direction * tissue1.n/tissue2.n
-            # mode = 'transmit'
+            k = np.sqrt(1 - tissue1.n**2/tissue2.n**2 * (1 - np.cos(ai)**2)) - tissue1.n/tissue2.n * np.cos(ai)
+            new_dir = k*norm + self.direction * tissue1.n/tissue2.n
+            mode = 'transmit'
             
-            new_dir = self.direction  # DEBUG
-            mode = 'transmit'  # DEBUG        
+            # new_dir = self.direction  # DEBUG
+            # mode = 'transmit'  # DEBUG        
         self.direction = new_dir
         return mode
         
