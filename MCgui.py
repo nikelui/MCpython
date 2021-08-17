@@ -143,7 +143,7 @@ class Geometries:
             plt.draw()
             plt.pause(0.001)
     
-    def showAbsorbed(self, absorbed, xlim=[-10,10], zlim=[-10,10]):
+    def showAbsorbed(self, absorbed, xlim=[-10,10], zlim=[-10,10], res=0.1):
         """
         Show colormap with photon absorption
 
@@ -156,9 +156,9 @@ class Geometries:
         -------
         None.
         """
-        # Create meshgrid to interpolate. Resolution is 0.1mm
-        x = np.linspace(xlim[0], xlim[1], num=(xlim[1]-xlim[0])*10+1, dtype=float)
-        z = np.linspace(zlim[0], zlim[1], num=(zlim[1]-zlim[0])*10+1, dtype=float)
+        # Create meshgrid to interpolate. Default resolution is 0.1mm
+        x = np.linspace(xlim[0], xlim[1], num=int((xlim[1]-xlim[0])/res) + 1, dtype=float)
+        z = np.linspace(zlim[0], zlim[1], num=int((zlim[1]-zlim[0])/res) + 1, dtype=float)
         weights = np.ones((len(z), len(x)), dtype=float)*1e-16  # weights grid. Slightly larger than 0 for logNorm
         for point in absorbed:
             # find the closest coordinates

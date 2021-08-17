@@ -153,7 +153,6 @@ class Photon:
             new_dir = -2*norm * self.direction + self.direction
             mode = 'reflect'
         else:  # transmit
-            # DEBUG, for now ignore this
             k = np.sqrt(1 - tissue1.n**2/tissue2.n**2 * (1 - np.cos(ai)**2)) - tissue1.n/tissue2.n * np.cos(ai)
             new_dir = k*norm + self.direction * tissue1.n/tissue2.n
             mode = 'transmit'
