@@ -25,7 +25,7 @@ param['roulette_weigth'] = 10
 tissues = [
     Infinite(n=1, mua=0., mus=0., order=0, num=0, color='cyan', detect='impinge'),
     Slab(n=1.4, mua=0.2, mus=5, order=1, num=1, phase=HG(g=0.8), top=0, thick=100, color='orange'),
-    Slab(n=1.4, mua=0.2, mus=5, order=2, num=2, phase=HG(g=0.8), top=0, thick=0.2, color='chocolate')
+    Slab(n=1.4, mua=1.5, mus=10, order=2, num=2, phase=HG(g=0.8), top=0, thick=0.2, color='chocolate')
     ]
 tissues.sort(key=lambda x: x.order, reverse=True)  # sort high to low
 
@@ -73,10 +73,11 @@ while p_l < param['photons_launched'] and p_d < param['photons_detected']:
             dist = tissue.distance(ph)
             if dist < step:
                 # need to find new tissue here
-                ph.coordinates += step*ph.direction  # move photon
+                ph.coordinates += (dist + 1e-3)*ph.direction  # move photon slightly in new tissue
                 incident_layer_id = ph.find_layer(tissues)
-                ph.coordinates -= step*ph.direction  # restore coordinates
+                ph.coordinates -= (dist + 1e-3)*ph.direction  # restore coordinates
                 incident_layer = tissues[incident_layer_id]
+                break  # after finding current layer, break loop
                 
         if incident_layer is None:  # Not crossed boundary
             ph.coordinates += step*ph.direction  # move photon
@@ -121,9 +122,9 @@ stop = datetime.now()
 print('Elapsed time: {}'.format(str(stop-start)))
 
 gg = Geometries(tissues)
-ax = gg.showGeometry(xlim=[-2, 2], zlim=[-2, 2])
-gg.showPaths(ax, debug, N=5000, linewidth=0.5)
+ax = gg.showGeometry(xlim=[-3, 3], zlim=[-3,3])
+# gg.showPaths(ax, detected, N=500, linewidth=0.5)
 
-# gg.animatePath(ax, debug, N=500, M=50)
+gg.animatePath(ax, detected, N=500, M=50)
 
 # asd = gg.showAbsorbed(absorbed)

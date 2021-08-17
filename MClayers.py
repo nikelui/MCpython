@@ -180,12 +180,22 @@ class Slab(Layer):
             Distance between the photon and the tissue. It is equal to np.inf if the
             path do not intersect
         """
-        if photon.direction[2] < 0:  # if directed toward negative z
-            dist = (self.top - photon.coordinates[2]) / photon.direction[2]
-        elif photon.direction[2] > 0:  # if directed toward positive z
-            dist = (self.top + self.thickness - photon.coordinates[2]) / photon.direction[2]
-        else:  # if directed horizontally
-            dist = np.inf
+        if self.is_inside(photon.coordinates):  # if photon is inside the layer
+            if photon.direction[2] < 0:  # if directed toward negative z
+                dist = (self.top - photon.coordinates[2]) / photon.direction[2]
+            elif photon.direction[2] > 0:  # if directed toward positive z
+                dist = (self.top + self.thickness - photon.coordinates[2]) / photon.direction[2]
+            else:  # if directed horizontally
+                dist = np.inf
+        else:  # if photon is outside the layer
+            # if under the slab, directed upwards
+            if photon.direction[2] < 0 and photon.coordinates[2] > (self.top + self.thickness):
+                dist = (self.top + self.thickness - photon.coordinates[2]) / photon.direction[2]
+            # if over the slab, directed downwards
+            elif photon.direction[2] > 0 and photon.coordinates[2] < self.top:
+                dist = (self.top - photon.coordinates[2]) / photon.direction[2]    
+            else:  # directed away from the slab
+                dist = np.inf
         return dist
     
     def incident(self, photon):
