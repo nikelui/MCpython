@@ -127,10 +127,11 @@ class Geometries:
         None.
         """
         linewidth = kwargs.get('linewidth', 1)
+        alpha = kwargs.get('alpha', 0.3)
         # First plot path
         for photon in photons[:N]:
             photonPath = np.array([[x[0] for x in photon.path], [x[2] for x in photon.path]])
-            ax.plot(photonPath[0], photonPath[1], linewidth=linewidth, linestyle='-', color='yellow', alpha=0.3)
+            ax.plot(photonPath[0], photonPath[1], linewidth=linewidth, linestyle='-', color='yellow', alpha=alpha)
         # Now do the animation       
         photonPath = np.array([[x[0] for x in photons[0].path], [x[2] for x in photons[0].path]])
         current = ax.plot(photonPath[0], photonPath[1], linewidth=2,

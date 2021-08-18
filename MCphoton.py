@@ -17,9 +17,11 @@ class Photon:
         self.direction = np.array([0,0,1], dtype=float)  # default to positive z direction
         self.weigth = 1.0  # photon packet weigth
         self.dead = False  # flag to check photon termination
+        self.detected = False  # Flag to determine if a photon is detected
         self.step_size = 0  # step size (in mm). Update at every iteration
         self.scatters = 0  # number of scattering events
         self.path = []  # to store photon path
+        self.angles = []  # to store scattering directions
     
     def step(self, tissue):
         """
