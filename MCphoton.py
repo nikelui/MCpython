@@ -16,6 +16,7 @@ class Photon:
         self.coordinates = np.array([0,0,0], dtype=float)  # in mm. Default to axis origin
         self.direction = np.array([0,0,1], dtype=float)  # default to positive z direction
         self.weigth = 1.0  # photon packet weigth
+        self.spec = 0  # specular reflection at the surface
         self.dead = False  # flag to check photon termination
         self.detected = False  # Flag to determine if a photon is detected
         self.step_size = 0  # step size (in mm). Update at every iteration
@@ -73,34 +74,25 @@ class Photon:
         new_dir : FLOAT ARRAY
             new scattering direction
         """
-        theta, phi = tissue.phaseFunction.getAngles()  # randomly sample scattering angles
         mux, muy, muz = self.direction  # unpack components for convenience
-        
+        cos_theta, cos_phi = tissue.phaseFunction.getAngles()  # randomly sample scattering angles
+        # Save some values to optimize (trigonometric functions are expensive)
+        temp = np.sqrt(1-muz**2)
+        sin_theta = np.sqrt(1 - cos_theta**2)
+        sin_phi = np.sqrt(1 - cos_phi**2)
+
         if np.abs(muz) < 0.9999:
-            ## NEW approach
-            # convert old direction cosines to angles
-            old_theta = np.arccos(self.direction[2])  # muz = cos(theta)
-            old_phi = np.arcsin(self.direction[1]/np.sin(old_theta))
-            theta += old_theta  # update directions
-            phi += old_phi
-            # convert to director cosines again
-            new_dir = np.array([
-                np.sin(theta)*np.cos(phi),  # mux
-                np.sin(theta)*np.sin(phi),  # muy
-                np.cos(theta)               # muz
-                ])
         # OLD approach
-        # # if np.abs(muz) < 0.9999:
-        #     new_dir = np.array([
-        #         np.sin(theta)/np.sqrt(1-muz**2) * (mux*muz*np.cos(phi) - muy*np.sin(phi)) + mux*np.cos(theta),  # mux'
-        #         np.sin(theta)/np.sqrt(1-muz**2) * (muy*muz*np.cos(phi) - mux*np.sin(phi)) + muy*np.cos(theta),  # muy'
-        #         -np.sin(theta)*np.cos(theta)*np.sqrt(1-muz**2) + muz*np.cos(theta)                              # muz'
-        #         ])
+            new_dir = np.array([
+                sin_theta/temp * (mux*muz*cos_phi - muy*sin_phi + mux*cos_theta),  # mux'
+                sin_theta/temp * (muy*muz*cos_phi - mux*sin_phi + muy*cos_theta),  # muy'
+                -sin_theta*cos_phi*temp + muz*cos_theta                            # muz'
+                ])
         else:  # use this to avoid division by zero
             new_dir = np.array([
-                np.sin(theta)*np.cos(phi),    # mux
-                np.sin(theta)*np.sin(phi),    # muy
-                np.cos(theta) * np.sign(muz)  # muz
+                sin_theta * cos_phi,    # mux
+                sin_theta * sin_phi,    # muy
+                cos_theta * np.sign(muz)  # muz
                 ])
             
         self.direction = new_dir  # update direction 
@@ -123,6 +115,7 @@ class Photon:
         """
         Rsp = (tissue1.n - tissue2.n)**2/(tissue1.n + tissue2.n)**2  # specular reflection
         self.weigth -= Rsp  # update weigth
+        return Rsp  # needs to be added to total reflection
     
     def fresnel(self, tissue1, tissue2):
         """
@@ -146,12 +139,14 @@ class Photon:
         # Check for total internal reflection
         if tissue1.n > tissue2.n and ai > np.arcsin(tissue2.n/tissue1.n):
             Ri = 1  # internal reflection
+        elif tissue1.n == tissue2.n:  # matched reflection index
+            Ri = 0  # transmit with same direction
         else:
             at = np.arcsin(tissue1.n/tissue2.n * np.sin(ai))  # Snell law, transmission angle
             Ri = 0.5*( np.sin(ai-at)**2/np.sin(ai+at)**2 + np.tan(ai-at)**2/np.tan(ai+at)**2 ) 
         # Randomly determine if reflect or transmit
         norm = top_layer.normal(self.coordinates)  # assume the photon is on the boundary
-        if np.random.rand() <= Ri:  # reflect
+        if np.random.rand() < Ri:  # reflect
             new_dir = -2*norm * self.direction + self.direction
             mode = 'reflect'
         else:  # transmit

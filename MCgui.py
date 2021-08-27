@@ -12,6 +12,7 @@ import time
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
+from mpl_toolkits import mplot3d
 import MClayers
 from MCPhaseFun import HenyeyGreenstein as HG  # debug
 
@@ -65,25 +66,70 @@ class Geometries:
         -------
         ax : MATPLOTLIB AXIS OBJECT
         """
-        plt.figure(num=1, figsize=(10,8))
-        ax = plt.gca()
+        fig, ax = plt.subplots(nrows=1, ncols=2, num=1, figsize=(15,5))
         for tissue in self.tissues[::-1]:  # draw tissues from the lowest
             if type(tissue) is MClayers.Infinite:  # outside tissue
-                ax.set_facecolor(tissue.color)
+                ax[0].set_facecolor(tissue.color)
+                ax[1].set_facecolor(tissue.color)
             elif type(tissue) is MClayers.Slab:  # slab
-                ax.axhspan(ymin=tissue.top, ymax=tissue.top+tissue.thickness, color=tissue.color)
+                ax[0].axhspan(ymin=tissue.top, ymax=tissue.top+tissue.thickness, color=tissue.color)
+                ax[1].axhspan(ymin=tissue.top, ymax=tissue.top+tissue.thickness, color=tissue.color)
         # draw light source
-        ax.plot([0,0], [0, zlim[0]], linewidth=2, color='yellow', linestyle='-')
+        ax[0].plot([0,0], [0, zlim[0]], linewidth=2, color='yellow', linestyle='-')
+        ax[1].plot([0,0], [0, zlim[0]], linewidth=2, color='yellow', linestyle='-')
         
         # plt.axis('off')
-        plt.xlim(xlim)
-        plt.xlabel('mm')
-        plt.ylim(zlim)
-        plt.ylabel('mm')
-        ax.invert_yaxis()
+        ax[0].set_xlim(xlim)
+        ax[0].set_xlabel('mm')
+        ax[0].set_ylim(zlim)
+        ax[0].set_ylabel('mm')
+        ax[0].set_title('XZ plane')
+        ax[0].invert_yaxis()
+        ax[0].set_aspect('equal')
+        ax[1].set_xlim(xlim)
+        ax[1].set_xlabel('mm')
+        ax[1].set_ylim(zlim)
+        ax[1].set_ylabel('mm')
+        ax[1].set_title('YZ plane')
+        ax[1].invert_yaxis()
+        ax[1].set_aspect('equal')
+        
         plt.tight_layout()
         plt.show()
         return ax  # useful for other plots
+    
+    def paths_3d(self, photons, N=50, xlim=[-10,10], ylim=[-10,10], zlim=[-1,10], **kwargs):
+        """
+        Shows the photon paths in 3D
+        Parameters
+        ----------
+        photons : LIST of simulated PHOTON OBJECTS
+            Results of the simulation, with scattering paths
+        N : INT
+            number of photon paths to draw(first N)
+        
+        Returns
+        -------
+        None.
+        """
+        linewidth = kwargs.get('linewidth', 1)
+        alpha = kwargs.get('alpha', 1)
+        fig = plt.figure(num=3, figsize=(7,6))
+        ax = fig.add_subplot(111, projection='3d')
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+        ax.set_zlim(zlim)        
+        # ax.set_aspect('equal')
+        ax.invert_zaxis()
+        # plot paths
+        for photon in photons[:N]:
+            photonPath = np.array([[x[0] for x in photon.path],   # x
+                                   [x[1] for x in photon.path],   # y
+                                   [x[2] for x in photon.path]])  # z
+            ax.plot(photonPath[0], photonPath[1], photonPath[2], linewidth=linewidth,
+                    linestyle='-', color='orange', alpha=alpha)
+        ax.plot(0,0,0, 'oy', markerfacecolor='yellow', markersize=5)
+    
     
     def showPaths(self, ax, photons, N=100, **kwargs):
         """
@@ -102,9 +148,16 @@ class Geometries:
         None.
         """
         linewidth = kwargs.get('linewidth', 1)
+        alpha = kwargs.get('alpha', 0.3)
         for photon in photons[:N]:
+            # XZ plane
             photonPath = np.array([[x[0] for x in photon.path], [x[2] for x in photon.path]])
-            ax.plot(photonPath[0], photonPath[1], linewidth=linewidth, linestyle='-', color='yellow', alpha=0.3)
+            ax[0].plot(photonPath[0], photonPath[1], linewidth=linewidth,
+                       linestyle='-', color='yellow', alpha=alpha)
+            # YZ plane
+            photonPath = np.array([[x[1] for x in photon.path], [x[2] for x in photon.path]])
+            ax[1].plot(photonPath[0], photonPath[1], linewidth=linewidth,
+                       linestyle='-', color='yellow', alpha=alpha)
     
     def animatePath(self, ax, photons, N=100, M=20, **kwargs):
         """
@@ -126,6 +179,7 @@ class Geometries:
         -------
         None.
         """
+        # TODO: animate on both XZ / YZ plane
         linewidth = kwargs.get('linewidth', 1)
         alpha = kwargs.get('alpha', 0.3)
         # First plot path
