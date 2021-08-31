@@ -13,7 +13,7 @@ from datetime import datetime
 from MCphoton import Photon
 from matplotlib import pyplot as plt
 
-path = './model1'
+path = './model2'
 
 # Total reflectance / transmittance
 tot_refl = []
@@ -25,12 +25,16 @@ radial_refl = []
 radial_trans = []
 r_step = 0.1  # mm
 r_detect = np.arange(0, 10, r_step)  # radial detector
+A_detect = np.diff(np.pi * r_detect**2)  # Areas of the ring detectors to normalize
+r_detect = r_detect[1:]  # remove zero
 
 # Angular distribution
 angular_refl = []
 angular_trans = []
 a_step = np.pi/60  # radians
 a_detect = np.arange(0, np.pi/2, a_step)  # angular detector
+O_detect = 2*np.pi * -np.diff(np.cos(a_detect))  # solid angle of angular detectors
+a_detect = a_detect[1:]  # remove zero
 
 # measure elapsed time
 start = datetime.now()
@@ -55,11 +59,11 @@ for _i, file in enumerate(os.listdir(path)):
                     tot_r += photon.weigth  # reflected to the surface
                     # find radial position
                     rho = np.sqrt(photon.coordinates[0]**2 + photon.coordinates[1]**2)  # radius
-                    idx = max(np.searchsorted(r_detect, rho) - 1, 0)  # need -1 to get correct position
+                    idx = min(np.searchsorted(r_detect, rho), len(r_detect)-1)
                     radial_r[idx] += photon.weigth
                     # find angular position
                     theta = np.arccos(np.abs(photon.direction[2]))
-                    idx = max(np.searchsorted(a_detect, theta) - 1, 0)  # need -1 to get correct position
+                    idx = min(np.searchsorted(a_detect, theta), len(a_detect)-1)
                     angular_r[idx] += photon.weigth
                 
                 # TODO: better check on coordinates
@@ -67,34 +71,37 @@ for _i, file in enumerate(os.listdir(path)):
                     if photon.scatters == 0:
                         tot_u += photon.weigth
                         n_uns += 1  # DEBUG
+                        # radial_t[0] += photon.weigth  # unscattered photons, comment these lines
+                        # angular_t[0] += photon.weigth  # out if you don't want to count them
                     else:
                         tot_t += photon.weigth  # transmitted to bottom
                         # find radial position
                         rho = np.sqrt(photon.coordinates[0]**2 + photon.coordinates[1]**2)  # radius
-                        idx = max(np.searchsorted(r_detect, rho) - 1, 0)  # need -1 to get correct position
+                        idx = min(np.searchsorted(r_detect, rho), len(r_detect)-1)
                         radial_t[idx] += photon.weigth
                         # find angular position
                         theta = np.arccos(np.abs(photon.direction[2]))
-                        idx = max(np.searchsorted(a_detect, theta) - 1, 0)  # need -1 to get correct position
+                        idx = min(np.searchsorted(a_detect, theta), len(a_detect)-1)
                         angular_t[idx] += photon.weigth
         # append to arrays (for statistics)
         tot_refl.append(tot_r)
         tot_trans.append(tot_t)
         unscattered.append(tot_u)
-        radial_refl.append(radial_r)
-        radial_trans.append(radial_t)
-        angular_refl.append(angular_r)
-        angular_trans.append(angular_t)
+        radial_refl.append(radial_r / A_detect)  # normalize to area / solid angle
+        radial_trans.append(radial_t / A_detect)
+        angular_refl.append(angular_r / O_detect)
+        angular_trans.append(angular_t / O_detect)
         
 stop = datetime.now()
 print('Elapsed time: {}'.format(str(stop-start)))
 
 print('Reflectance = {:.2f}%  std:{:.2f}%'.format(np.mean(tot_refl)/n_emitted *100,
                                                  np.std(tot_refl)/n_emitted *100))
-print('Transmittance = {:.2f}%  std:{:.2f}%'.format(np.mean(tot_trans)/n_emitted *100,
-                                                 np.std(tot_trans)/n_emitted *100))
-print(' |-- unscattered = {:.2f}%  std:{:.2f}%'.format(np.mean(unscattered)/n_emitted *100,
-                                                 np.std(unscattered)/n_emitted *100))
+if np.mean(tot_trans) > 0:
+    print('Transmittance = {:.2f}%  std:{:.2f}%'.format(np.mean(tot_trans)/n_emitted *100,
+                                                     np.std(tot_trans)/n_emitted *100))
+    print(' |-- unscattered = {:.2f}%  std:{:.2f}%'.format(np.mean(unscattered)/n_emitted *100,
+                                                     np.std(unscattered)/n_emitted *100))
 # radial distribution
 fig, ax = plt.subplots(nrows=1, ncols=2, num=1, figsize=(10,4))
 # ax[0].errorbar(r_detect + r_step, np.mean(radial_refl, axis=0)/n_emitted,
@@ -102,18 +109,19 @@ fig, ax = plt.subplots(nrows=1, ncols=2, num=1, figsize=(10,4))
 ax[0].plot(r_detect + r_step, np.mean(radial_refl, axis=0)/n_emitted, 'x')
 ax[0].set_title('Reflectance')
 ax[0].set_xlabel('mm')
-ax[0].set_xlim([0, 2])
+ax[0].set_xlim([0, 5])
 ax[0].set_yscale('log')
 ax[0].grid(True, linestyle=':')
 # ax[1].errorbar(r_detect + r_step, np.mean(radial_trans, axis=0)/n_emitted,
 #                yerr=np.std(radial_trans, axis=0)/n_emitted)
-ax[1].plot(r_detect + r_step, np.mean(radial_trans, axis=0)/n_emitted, 'x')
-ax[1].set_title('Transmittance')
-ax[1].set_xlabel('mm')
-ax[1].set_xlim([0, 2])
-ax[1].set_yscale('log')
-ax[1].grid(True, linestyle=':')
-plt.tight_layout()
+if np.mean(tot_trans) > 0:
+    ax[1].plot(r_detect + r_step, np.mean(radial_trans, axis=0)/n_emitted, 'x')
+    ax[1].set_title('Transmittance')
+    ax[1].set_xlabel('mm')
+    ax[1].set_xlim([0, 5])
+    ax[1].set_yscale('log')
+    ax[1].grid(True, linestyle=':')
+    plt.tight_layout()
 
 # angular distribution
 fig, ax = plt.subplots(nrows=1, ncols=2, num=2, figsize=(10,4))
@@ -125,8 +133,9 @@ ax[0].set_xlabel('[rad]')
 ax[0].grid(True, linestyle=':')
 # ax[1].errorbar(a_detect + a_step, np.mean(angular_trans, axis=0)/n_emitted,
 #                yerr=np.std(angular_trans, axis=0)/n_emitted)
-ax[1].plot(a_detect + a_step, np.mean(angular_trans, axis=0)/n_emitted, 'x')
-ax[1].set_title('Transmittance')
-ax[1].set_xlabel('[rad]')
-ax[1].grid(True, linestyle=':')
-plt.tight_layout()
+if np.mean(tot_trans) > 0:
+    ax[1].plot(a_detect + a_step, np.mean(angular_trans, axis=0)/n_emitted, 'x')
+    ax[1].set_title('Transmittance')
+    ax[1].set_xlabel('[rad]')
+    ax[1].grid(True, linestyle=':')
+    plt.tight_layout()

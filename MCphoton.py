@@ -74,18 +74,23 @@ class Photon:
         new_dir : FLOAT ARRAY
             new scattering direction
         """
-        mux, muy, muz = self.direction  # unpack components for convenience
-        cos_theta, cos_phi = tissue.phaseFunction.getAngles()  # randomly sample scattering angles
+        mux, muy, muz = self.direction.copy()  # unpack components for convenience
+        cos_theta, phi = tissue.phaseFunction.getAngles()  # randomly sample scattering angles
         # Save some values to optimize (trigonometric functions are expensive)
         temp = np.sqrt(1-muz**2)
         sin_theta = np.sqrt(1 - cos_theta**2)
-        sin_phi = np.sqrt(1 - cos_phi**2)
+        cos_phi = np.cos(phi)
+        # sin_phi = np.sin(phi)
+        if phi <= np.pi:  # new approach, sqrt is less expensive than sin
+            sin_phi = np.sqrt(1 - cos_phi**2)
+        else:
+            sin_phi = -np.sqrt(1 - cos_phi**2)
 
-        if np.abs(muz) < 0.9999:
+        if np.abs(muz) < 0.99:
         # OLD approach
             new_dir = np.array([
-                sin_theta/temp * (mux*muz*cos_phi - muy*sin_phi + mux*cos_theta),  # mux'
-                sin_theta/temp * (muy*muz*cos_phi - mux*sin_phi + muy*cos_theta),  # muy'
+                sin_theta/temp * (mux*muz*cos_phi - muy*sin_phi) + mux*cos_theta,  # mux'
+                sin_theta/temp * (muy*muz*cos_phi + mux*sin_phi) + muy*cos_theta,  # muy'
                 -sin_theta*cos_phi*temp + muz*cos_theta                            # muz'
                 ])
         else:  # use this to avoid division by zero

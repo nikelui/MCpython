@@ -42,13 +42,22 @@ class HenyeyGreenstein(PhaseFunction):
         cos_theta, cos_phi : (FLOAT, FLOAT)
             Scattering cosine directors in the longitudinal and azimuthal directions
         """
-        cos_phi = np.cos(2 * np.pi * np.random.rand())  # uniform probability in the azimuthal direction
+        phi = 2 * np.pi * np.random.rand()  # uniform probability in the azimuthal direction
         
         g = self.g  # for convenience
         if g > 1e-3:
             cos_theta = (1 + g**2 - ((1-g**2) / (1-g+2*g*np.random.rand()))**2) / (2*g)  # HG
         else:
             cos_theta = 2 * np.random.rand() - 1  # g = 0 -> isotropical scattering
+            # cos_theta = np.cos(2 * np.pi * np.random.rand())
         
-        return cos_theta, cos_phi
-        
+        return cos_theta, phi
+
+
+if __name__ == '__main__':
+    ph = HenyeyGreenstein(g=0)
+    cos_phi = np.zeros((10000,1))
+    cos_theta = np.zeros((10000,1))
+    for _i in range(10000):
+        cos_theta[_i], cos_phi[_i] = ph.getAngles()
+    

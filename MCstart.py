@@ -17,32 +17,34 @@ from MCgui import Geometries
 
 # TODO: read parameters and tissues from file
 param = {}
-param['photons_launched'] = 5e3
+param['photons_launched'] = 5e4
 param['photons_detected'] = 0
 param['weigth_threshold'] = 0.1
 param['roulette_weigth'] = 10
 param['n_sim'] = 10  # number of simulations (to perform statistics)
-param['save_path'] = './model2'
+param['save_path'] = './model3'
 
 # Define tissue list
 ## model 1
 # tissues = [
 #     Infinite(n=1, mua=0., mus=0., order=0, num=0, color='cyan', detect='impinge'),
-#     Slab(n=1, mua=1, mus=9, order=1, num=1, phase=HG(g=.75), top=0, thick=10.2, color='orange'),
+#     Slab(n=1, mua=1, mus=9, order=1, num=1, phase=HG(g=.75), top=0, thick=0.2, color='orange'),
 #     ]
 ## model 2
-tissues = [
-    Infinite(n=1, mua=0., mus=0., order=0, num=0, color='cyan', detect='impinge'),
-    Slab(n=1.5, mua=1, mus=9, order=1, num=1, phase=HG(g=0), top=0, thick=100, color='orange'),
-    ]
-## model 3
 # tissues = [
 #     Infinite(n=1, mua=0., mus=0., order=0, num=0, color='cyan', detect='impinge'),
-#     Slab(n=1.37, mua=0.1, mus=10, order=1, num=1, phase=HG(g=0.9), top=0, thick=1, color='orange'),
-#     Slab(n=1.37, mua=0.1, mus=1, order=2, num=2, phase=HG(g=0), top=1, thick=1, color='chocolate'),
-#     Slab(n=1.37, mua=0.2, mus=1, order=3, num=3, phase=HG(g=0.7), top=2, thick=2, color='sienna'),
+#     Slab(n=1.5, mua=1, mus=9, order=1, num=1, phase=HG(g=0), top=0, thick=100, color='orange'),
 #     ]
+## model 3
+tissues = [
+    Infinite(n=1, mua=0., mus=0., order=0, num=0, color='cyan', detect='impinge'),
+    Slab(n=1.37, mua=0.1, mus=10, order=1, num=1, phase=HG(g=0.9), top=0, thick=1, color='orange'),
+    Slab(n=1.37, mua=0.1, mus=1, order=2, num=2, phase=HG(g=0), top=1, thick=1, color='chocolate'),
+    Slab(n=1.37, mua=0.2, mus=1, order=3, num=3, phase=HG(g=0.7), top=2, thick=2, color='sienna'),
+    ]
 tissues.sort(key=lambda x: x.order, reverse=True)  # sort high to low
+
+times = []  # DEBUG
 
 # Loop here for multiple simulations
 for _i in range(param['n_sim']):
@@ -153,19 +155,21 @@ for _i in range(param['n_sim']):
         detected.append(ph)  # new approach: save all emitted photons
     stop = datetime.now()
     print('Simulation {} of {}. Elapsed time: {}'.format(_i+1, param['n_sim'],str(stop-start)))
+    times.append((stop-start).total_seconds())
     # Save data
     # TEST with PICKLE
-    if False:
+    if True:
         if not os.path.exists(param['save_path']):
             os.makedirs(param['save_path'])
         with open('{}/data{}.pkl'.format(param['save_path'], _i+1), 'wb') as out_file:
             pickle.dump(detected, out_file)
         # with open('test_data.pkl', 'rb') as in_file:
         #     test_load = pickle.load(in_file)
+print(r'Average time: {:.2f}+/-{:.2f} s'.format(np.mean(times), np.std(times)))
 
-gg = Geometries(tissues)
-ax = gg.showGeometry(xlim=[-2, 2], zlim=[-.5,2])
-gg.showPaths(ax, detected, N=5000, linewidth=0.3)
+# gg = Geometries(tissues)
+# ax = gg.showGeometry(xlim=[-2, 2], zlim=[-.5,2])
+# gg.showPaths(ax, detected, N=5000, linewidth=0.3)
 # gg.animatePath(ax, detected, N=1000, M=50, linewidth=0.5)
 # gg.paths_3d(detected, N=1000, xlim=[-1.5,1.5], ylim=[-1.5,1.5], zlim=[-1,3], alpha=0.3)
 # asd = gg.showAbsorbed(absorbed, xlim=[-3,3], zlim=[-3,3], res=0.01)
