@@ -12,6 +12,7 @@ import time
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
+from matplotlib.animation import FuncAnimation
 from mpl_toolkits import mplot3d
 import MClayers
 from MCPhaseFun import HenyeyGreenstein as HG  # debug
@@ -196,7 +197,15 @@ class Geometries:
             current[0].set_xdata(photonPath[0])
             current[0].set_ydata(photonPath[1])
             plt.draw()
-            plt.pause(0.001)
+            plt.pause(0.001)     
+        ## TODO: new approach: using matplotlib FuncAnimation
+        # linewidth = kwargs.get('linewidth', 1)
+        # alpha = kwargs.get('alpha', 0.3)
+        # self.showPaths(ax, photons, N=N, linewidth=linewidth, alpha=alpha)
+        # fig = plt.gcf()
+        # ani = FuncAnimation(fig, aniFunc, interval=500)
+        
+        
     
     def showAbsorbed(self, absorbed, xlim=[-10,10], zlim=[-10,10], res=0.1):
         """

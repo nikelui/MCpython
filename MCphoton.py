@@ -152,11 +152,11 @@ class Photon:
         # Randomly determine if reflect or transmit
         norm = top_layer.normal(self.coordinates)  # assume the photon is on the boundary
         if np.random.rand() < Ri:  # reflect
-            new_dir = -2*norm * self.direction + self.direction
+            new_dir = -2*norm * self.direction.copy() + self.direction.copy()
             mode = 'reflect'
         else:  # transmit
             k = np.sqrt(1 - tissue1.n**2/tissue2.n**2 * (1 - np.cos(ai)**2)) - tissue1.n/tissue2.n * np.cos(ai)
-            new_dir = k*norm + self.direction * tissue1.n/tissue2.n
+            new_dir = k*norm + self.direction.copy() * tissue1.n/tissue2.n
             mode = 'transmit'
             
             # new_dir = self.direction  # DEBUG
@@ -182,6 +182,7 @@ class Photon:
         if RNG == r:  # the photon survives
             self.weigth *= r
         else:  # the photon is terminated
+            self.weigth = 0  # maybe it is not necessary    
             self.dead = True
         return
     

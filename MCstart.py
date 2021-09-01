@@ -17,12 +17,12 @@ from MCgui import Geometries
 
 # TODO: read parameters and tissues from file
 param = {}
-param['photons_launched'] = 5e4
+param['photons_launched'] = 5e3
 param['photons_detected'] = 0
 param['weigth_threshold'] = 0.1
 param['roulette_weigth'] = 10
 param['n_sim'] = 10  # number of simulations (to perform statistics)
-param['save_path'] = './model3'
+param['save_path'] = './model3bis'
 
 # Define tissue list
 ## model 1
@@ -167,9 +167,9 @@ for _i in range(param['n_sim']):
         #     test_load = pickle.load(in_file)
 print(r'Average time: {:.2f}+/-{:.2f} s'.format(np.mean(times), np.std(times)))
 
-# gg = Geometries(tissues)
-# ax = gg.showGeometry(xlim=[-2, 2], zlim=[-.5,2])
-# gg.showPaths(ax, detected, N=5000, linewidth=0.3)
+gg = Geometries(tissues)
+ax = gg.showGeometry(xlim=[-10, 10], zlim=[-.5, 5])
+gg.showPaths(ax, detected, N=1000, linewidth=0.3)
 # gg.animatePath(ax, detected, N=1000, M=50, linewidth=0.5)
 # gg.paths_3d(detected, N=1000, xlim=[-1.5,1.5], ylim=[-1.5,1.5], zlim=[-1,3], alpha=0.3)
 # asd = gg.showAbsorbed(absorbed, xlim=[-3,3], zlim=[-3,3], res=0.01)
