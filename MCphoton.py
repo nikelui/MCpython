@@ -22,6 +22,7 @@ class Photon:
         self.step_size = 0  # step size (in mm). Update at every iteration
         self.scatters = 0  # number of scattering events
         self.path = []  # to store photon path
+        self.pathlength = 0  # to store total pathlength
         self.angles = []  # to store scattering directions
     
     def step(self, tissue):
@@ -150,13 +151,23 @@ class Photon:
             at = np.arcsin(tissue1.n/tissue2.n * np.sin(ai))  # Snell law, transmission angle
             Ri = 0.5*( np.sin(ai-at)**2/np.sin(ai+at)**2 + np.tan(ai-at)**2/np.tan(ai+at)**2 ) 
         # Randomly determine if reflect or transmit
-        norm = top_layer.normal(self.coordinates)  # assume the photon is on the boundary
+        norm = top_layer.normal(self)  # assume the photon is on the boundary
         if np.random.rand() < Ri:  # reflect
             new_dir = -2*norm * self.direction.copy() + self.direction.copy()
             mode = 'reflect'
         else:  # transmit
             k = np.sqrt(1 - tissue1.n**2/tissue2.n**2 * (1 - np.cos(ai)**2)) - tissue1.n/tissue2.n * np.cos(ai)
-            new_dir = k*norm + self.direction.copy() * tissue1.n/tissue2.n
+            if k is None:
+                print('k is None') # debug
+            if norm is None:
+                print('norm is None')  # debug
+            if self.direction is None:
+                print('dir is None')  # DEBUG
+            
+            if self.coordinates[2] < 1e-4:
+                new_dir = -k*norm + self.direction * tissue1.n/tissue2.n
+            else:
+                new_dir = k*norm + self.direction * tissue1.n/tissue2.n
             mode = 'transmit'
             
             # new_dir = self.direction  # DEBUG

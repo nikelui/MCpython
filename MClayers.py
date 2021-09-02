@@ -215,25 +215,32 @@ class Slab(Layer):
         ai = np.arccos(np.abs(photon.direction[2]))  # incidence angle
         return ai
     
-    def normal(self, coord):
+    def normal(self, ph):
         """
         Calculate the normal vector to the boundary at coordinates coord
 
         Parameters
         ----------
-        coord : FLOAT ARRAY
-            Coordinates where to calculate the normal vector
+        ph : PHOTON OBJECT
+            Photon with coordinates where to calculate the normal vector
 
         Returns
         -------
         norm : FLOAT ARRAY
             unit vector of the surface normal
         """
-        # if np.abs(coord[2] - self.top) < 1e-3 or np.abs(coord[2] - self.top+self.thickness) < 1e-3:
+        # TODO: debug boundary crossing
+        # if np.abs(ph.coordinates[2] - self.top) < 1e-3:
         #     norm = np.array([0,0,1])
+        # else: #np.abs(coord[2] - self.top - self.thickness) < 1e-3:
+        #     norm = np.array([0,0,-1])
         # else:
         #     norm = None
         norm = np.array([0,0,1])
+        # if ph.direction[2] > 0:
+        #     norm = np.array([0,0,1])
+        # else:
+        #     norm = np.array([0,0,-1])
         return norm
     
     def intersect(self, photon):
@@ -269,8 +276,3 @@ class Slab(Layer):
             intersect = None
         return intersect
     
-        
-        
-        
-        
-        
