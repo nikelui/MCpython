@@ -13,7 +13,7 @@ from datetime import datetime
 from MCphoton import Photon
 from matplotlib import pyplot as plt
 
-path = './model3bis'
+path = './model2bis'
 
 # Total reflectance / transmittance
 tot_refl = []
