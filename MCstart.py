@@ -17,7 +17,7 @@ from MCgui import Geometries
 
 # TODO: read parameters and tissues from file
 param = {}
-param['photons_launched'] = 5e4
+param['photons_launched'] = 5e3
 param['photons_detected'] = 0
 param['weigth_threshold'] = 0.1
 param['roulette_weigth'] = 10
@@ -90,14 +90,14 @@ for _i in range(param['n_sim']):
         incident_layer = None
         
         while not ph.dead:  # Main loop: iterate until photon is dead
-            step = ph.step(current_layer)
-            ph.step_size = step
+            if ph.step_size == 0:
+                ph.step_size = ph.step(current_layer)
             # check if photons hits any boundary
             dists = [t.distance(ph) if t.distance(ph) > 1e-4 else np.inf for t in tissues]
             dist = min(dists)
             # for tissue in tissues:
             #     dist = tissue.distance(ph)
-            if dist < step:
+            if dist < ph.step_size:
                 # need to find new tissue here
                 ph.coordinates += (dist + 1e-3)*ph.direction  # move photon slightly in new tissue
                 incident_layer_id = ph.find_layer(tissues)
@@ -105,8 +105,9 @@ for _i in range(param['n_sim']):
                 incident_layer = tissues[incident_layer_id]
             
             if incident_layer is None:  # Not crossed boundary
-                ph.coordinates += step*ph.direction  # move photon
-                ph.pathlength += step  # increase pathlength
+                ph.coordinates += ph.step_size*ph.direction  # move photon
+                ph.pathlength += ph.step_size  # increase pathlength
+                ph.step_size = 0  # reset step
                 if param['debug']:
                     if p_l <= 2:
                         print('coord: {}, dir: {}, w: {:.3f}, layer: {}'.format(
@@ -123,8 +124,8 @@ for _i in range(param['n_sim']):
                     ph.angles.append(ph.direction.copy())
                     ph.scatters += 1
                 
-            else:  # crossed boundary
-                ds = step - dist  # save remaining step
+            else:  # Crossed boundary
+                ph.step_size -= dist  # reduce step
                 ph.coordinates += dist*ph.direction  # move photon to boundary
                 ph.pathlength += dist
                 if param['debug']:
@@ -132,60 +133,71 @@ for _i in range(param['n_sim']):
                         print('coord: {}, dir: {}, w: {:.3f}, layer: {}'.format(
                             ph.coordinates, ph.direction, ph.weigth, current_layer.number))  # DEBUG
                 ph.path.append(ph.coordinates.copy())  # add to path
-                while ds > 0:
-                    mode = ph.fresnel(current_layer, incident_layer)  # transmit or reflect and update direction
-                    ph.angles.append(ph.direction.copy())  # add to angles
-                    if mode == 'reflect':
+                mode = ph.fresnel(current_layer, incident_layer)  # transmit or reflect and update direction
+                ph.angles.append(ph.direction.copy())  # add to angles
+                
+                dw = ph.absorb(current_layer)  # update weigth
+                if dw > 1e-6:  # only save if absorption is happening
+                    absorbed.append(np.concatenate([ph.coordinates.copy(),[dw]]))  # save absorbed
+                
+                if ph.weigth < param['weigth_threshold']:
+                    ph.roulette(param['roulette_weigth'])  # kill the photon or increase weigth
+                
+                # reflect or refract
+                if mode == 'reflect':
+                    incident_layer = None
+                elif mode == 'transmit':
+                    if incident_layer.detect:
+                        ph.dead = True
+                        p_d += 1
+                        ph.detected = True  # photon is detected
                         incident_layer = None
-                    elif mode == 'transmit':
-                        if incident_layer.detect:
-                            ph.dead = True
-                            p_d += 1
-                            ph.detected = True  # photon is detected
-                            incident_layer = None
-                            break  # do not move further                             
-                        else:
-                            ds *= (current_layer.mua + current_layer.mus) / (incident_layer.mua + incident_layer.mus)  # update step
-                            current_layer = incident_layer
-                            incident_layer = None
-                    # calculate new distance
-                    # for tissue in tissues:
-                    #     dist = tissue.distance(ph)
-                    dists = [t.distance(ph) if t.distance(ph) > 1e-4 else np.inf for t in tissues]
-                    dist = min(dists)
-                    if 1e-4 < dist < ds:
-                        # need to find new tissue here
-                        ph.coordinates += (dist + 1e-3)*ph.direction  # move photon slightly in new tissue
-                        incident_layer_id = ph.find_layer(tissues)
-                        ph.coordinates -= (dist + 1e-3)*ph.direction  # restore coordinates
-                        incident_layer = tissues[incident_layer_id]
+                        break  # do not move further                             
+                    else:
+                        ph.step_size *= (current_layer.mua + current_layer.mus) /  \
+                                        (incident_layer.mua + incident_layer.mus)  # update step
+                        current_layer = incident_layer
+                        incident_layer = None
+                    
+                    # # calculate new distance
+                    # # for tissue in tissues:
+                    # #     dist = tissue.distance(ph)
+                    # dists = [t.distance(ph) if t.distance(ph) > 1e-4 else np.inf for t in tissues]
+                    # dist = min(dists)
+                    # if 1e-4 < dist < ph.step_size:
+                    #     # need to find new tissue here
+                    #     ph.coordinates += (dist + 1e-3)*ph.direction  # move photon slightly in new tissue
+                    #     incident_layer_id = ph.find_layer(tissues)
+                    #     ph.coordinates -= (dist + 1e-3)*ph.direction  # restore coordinates
+                    #     incident_layer = tissues[incident_layer_id]
                         
-                    if incident_layer is not None:  # if hits another boundary
-                        ph.coordinates += dist*ph.direction  # move photon
-                        ph.pathlength += dist
-                        if param['debug']:
-                            if p_l <= 2:
-                                print('coord: {}, dir: {}, w: {:.3f}, layer: {}'.format(
-                                    ph.coordinates, ph.direction, ph.weigth, current_layer.number))  # DEBUG
-                        ph.path.append(ph.coordinates.copy())  # add to path
-                        ds -= dist  # subtract from remaining step
-                        # loop back
-                    else:  # if does not hit boundary
-                        ph.coordinates += ds*ph.direction  # move photon
-                        ph.pathlength += ds
-                        if param['debug']:
-                            if p_l <= 2:
-                                print('coord: {}, dir: {}, w: {:.3f}, layer: {}'.format(
-                                    ph.coordinates, ph.direction, ph.weigth, current_layer.number))  # DEBUG
-                        ph.path.append(ph.coordinates.copy())  # add to path
-                        ds = 0  # this will break the loop
+                    # if incident_layer is not None:  # if hits another boundary
+                    #     ph.coordinates += dist*ph.direction  # move photon
+                    #     ph.pathlength += dist
+                    #     if param['debug']:
+                    #         if p_l <= 2:
+                    #             print('coord: {}, dir: {}, w: {:.3f}, layer: {}'.format(
+                    #                 ph.coordinates, ph.direction, ph.weigth, current_layer.number))  # DEBUG
+                    #     ph.path.append(ph.coordinates.copy())  # add to path
+                    #     ds -= dist  # subtract from remaining step
+                    #     # loop back
+                    # else:  # if does not hit boundary
+                    #     ph.coordinates += ds*ph.direction  # move photon
+                    #     ph.pathlength += ds
+                    #     if param['debug']:
+                    #         if p_l <= 2:
+                    #             print('coord: {}, dir: {}, w: {:.3f}, layer: {}'.format(
+                    #                 ph.coordinates, ph.direction, ph.weigth, current_layer.number))  # DEBUG
+                    #     ph.path.append(ph.coordinates.copy())  # add to path
+                    #     ds = 0  # this will break the loop
+                    
         detected.append(ph)  # new approach: save all emitted photons
     stop = datetime.now()
     print('Simulation {} of {}. Elapsed time: {}'.format(_i+1, param['n_sim'],str(stop-start)))
     times.append((stop-start).total_seconds())
     # Save data
     # TEST with PICKLE
-    if True:
+    if False:
         if not os.path.exists(param['save_path']):
             os.makedirs(param['save_path'])
         with open('{}/data{}.pkl'.format(param['save_path'], _i+1), 'wb') as out_file:
@@ -194,9 +206,9 @@ for _i in range(param['n_sim']):
         #     test_load = pickle.load(in_file)
 print(r'Average time: {:.2f}+/-{:.2f} s'.format(np.mean(times), np.std(times)))
 
-# gg = Geometries(tissues)
-# ax = gg.showGeometry(xlim=[-2, 2], zlim=[-.5, 2])
+gg = Geometries(tissues)
+ax = gg.showGeometry(xlim=[-2, 2], zlim=[-.5, 2])
 # # gg.showPaths(ax, detected, N=1000, linewidth=0.5)
-# gg.animatePath(ax[0], detected, N=100, M=20, linewidth=0.5)
+gg.animatePath(ax[0], detected, N=1000, M=50, linewidth=0.5)
 # # gg.paths_3d(detected, N=1000, xlim=[-2,2], ylim=[-2,2], zlim=[-1,2], alpha=0.3)
 # asd = gg.showAbsorbed(absorbed, xlim=[-3,3], zlim=[-3,3], res=0.01)
