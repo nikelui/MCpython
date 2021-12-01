@@ -55,9 +55,9 @@ class HenyeyGreenstein(PhaseFunction):
 
 
 if __name__ == '__main__':
-    ph = HenyeyGreenstein(g=0)
-    cos_phi = np.zeros((10000,1))
+    ph = HenyeyGreenstein(g=0.8)
+    phi = np.zeros((10000,1))
     cos_theta = np.zeros((10000,1))
     for _i in range(10000):
-        cos_theta[_i], cos_phi[_i] = ph.getAngles()
+        cos_theta[_i], phi[_i] = ph.getAngles()
     

@@ -24,7 +24,8 @@ class Photon:
         self.path = []  # to store photon path
         self.pathlength = 0  # to store total pathlength
         self.angles = []  # to store scattering directions
-    
+        self.layers = []  # DEBUG to store current layer index
+        
     def step(self, tissue):
         """
         Generate random step size
@@ -164,10 +165,11 @@ class Photon:
             if self.direction is None:
                 print('dir is None')  # DEBUG
             
-            if self.coordinates[2] < 1e-4:
+            if tissue1.n <= tissue2.n:
                 new_dir = -k*norm + self.direction * tissue1.n/tissue2.n
             else:
                 new_dir = k*norm + self.direction * tissue1.n/tissue2.n
+            # new_dir = k*norm + self.direction * tissue1.n/tissue2.n
             mode = 'transmit'
             
             # new_dir = self.direction  # DEBUG

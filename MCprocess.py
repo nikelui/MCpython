@@ -13,7 +13,7 @@ from datetime import datetime
 from MCphoton import Photon
 from matplotlib import pyplot as plt
 
-path = './model2bis'
+path = './model3bis'
 
 # Total reflectance / transmittance
 tot_refl = []
@@ -53,17 +53,17 @@ for _i, file in enumerate(os.listdir(path)):
         angular_r = np.zeros(len(a_detect))
         angular_t = np.zeros(len(a_detect))
         for photon in dataset:
-            tot_r += photon.spec
+            tot_r += photon.spec  # add specular reflection
             if photon.detected:  # only process if detected
-                if photon.coordinates[2] < 1e-8:  # allow tolerance
+                if -1e-10 < photon.coordinates[2] < 1e-10:  # allow tolerance
                     tot_r += photon.weigth  # reflected to the surface
                     # find radial position
                     rho = np.sqrt(photon.coordinates[0]**2 + photon.coordinates[1]**2)  # radius
-                    idx = min(np.searchsorted(r_detect, rho), len(r_detect)-1)
+                    idx = min(np.searchsorted(r_detect, rho, side='left'), len(r_detect)-1)
                     radial_r[idx] += photon.weigth
                     # find angular position
                     theta = np.arccos(np.abs(photon.direction[2]))
-                    idx = min(np.searchsorted(a_detect, theta), len(a_detect)-1)
+                    idx = min(np.searchsorted(a_detect, theta, side='left'), len(a_detect)-1)
                     angular_r[idx] += photon.weigth
                 
                 # TODO: better check on coordinates
@@ -106,21 +106,23 @@ if np.mean(tot_trans) > 0:
 fig, ax = plt.subplots(nrows=1, ncols=2, num=1, figsize=(10,4))
 # ax[0].errorbar(r_detect + r_step, np.mean(radial_refl, axis=0)/n_emitted,
 #                yerr=np.std(radial_refl, axis=0)/n_emitted)
-ax[0].plot(r_detect + r_step, np.mean(radial_refl, axis=0)/n_emitted, 'x')
+ax[0].plot(r_detect, np.mean(radial_refl, axis=0)/n_emitted, 'x')
 ax[0].set_title('Reflectance')
 ax[0].set_xlabel('mm')
 ax[0].set_xlim([0, 5])
+ax[0].set_ylim([1e-4, 1])
 ax[0].set_yscale('log')
-ax[0].grid(True, linestyle=':')
+ax[0].grid(True, which='both', linestyle=':')
 # ax[1].errorbar(r_detect + r_step, np.mean(radial_trans, axis=0)/n_emitted,
 #                yerr=np.std(radial_trans, axis=0)/n_emitted)
 if np.mean(tot_trans) > 0:
-    ax[1].plot(r_detect + r_step, np.mean(radial_trans, axis=0)/n_emitted, 'x')
+    ax[1].plot(r_detect, np.mean(radial_trans, axis=0)/n_emitted, 'x')
     ax[1].set_title('Transmittance')
     ax[1].set_xlabel('mm')
     ax[1].set_xlim([0, 5])
+    ax[1].set_ylim([1e-4, 1e-2])
     ax[1].set_yscale('log')
-    ax[1].grid(True, linestyle=':')
+    ax[1].grid(True, which='both', linestyle=':')
     plt.tight_layout()
 
 # angular distribution
@@ -137,5 +139,5 @@ if np.mean(tot_trans) > 0:
     ax[1].plot(a_detect + a_step, np.mean(angular_trans, axis=0)/n_emitted, 'x')
     ax[1].set_title('Transmittance')
     ax[1].set_xlabel('[rad]')
-    ax[1].grid(True, linestyle=':')
+    ax[1].grid(True, which='both', linestyle=':')
     plt.tight_layout()
