@@ -14,16 +14,19 @@ from MCphoton import Photon
 from MClayers import Slab, Infinite  #TODO: make imports dynamic
 from MCPhaseFun import HenyeyGreenstein as HG
 from MCgui import Geometries
+import addcopyfighandler
 
 # TODO: read parameters and tissues from file
 param = {}
-param['photons_launched'] = 5e3
+param['photons_launched'] = 1e2
 param['photons_detected'] = 0
 param['weigth_threshold'] = 0.1
 param['roulette_weigth'] = 10
 param['n_sim'] = 10  # number of simulations (to perform statistics)
-param['save_path'] = './model1bis'
+param['save_path'] = './whitemc2'
 param['debug'] = False
+param['lowmem'] = True  # check for low-memory simulations (discard photon.path and photon.angles)
+                        # note: this will break the GUI functions to show photon paths
 np.set_printoptions(precision=3)
 # Define tissue list
 ## model 1
@@ -37,11 +40,16 @@ np.set_printoptions(precision=3)
 #     Slab(n=1.5, mua=1, mus=9, order=1, num=1, phase=HG(g=0), top=0, thick=100, color='orange'),
 #     ]
 ## model 3
+# tissues = [
+#     Infinite(n=1, mua=0., mus=0., order=0, num=0, color='darkgray', detect='impinge'),
+#     Slab(n=1.37, mua=0.1, mus=10, order=3, num=3, phase=HG(g=0.9), top=0, thick=1, color='aquamarine'),
+#     Slab(n=1.37, mua=0.1, mus=1, order=2, num=2, phase=HG(g=0), top=1, thick=1, color='turquoise'),
+#     Slab(n=1.37, mua=0.2, mus=1, order=1, num=1, phase=HG(g=0.7), top=2, thick=2, color='lightseagreen'),
+#     ]
+## whiteMC
 tissues = [
-    Infinite(n=1, mua=0., mus=0., order=0, num=0, color='darkgray', detect='impinge'),
-    Slab(n=1.37, mua=0.1, mus=10, order=3, num=3, phase=HG(g=0.9), top=0, thick=1, color='aquamarine'),
-    Slab(n=1.37, mua=0.1, mus=1, order=2, num=2, phase=HG(g=0), top=1, thick=1, color='turquoise'),
-    Slab(n=1.37, mua=0.2, mus=1, order=1, num=1, phase=HG(g=0.7), top=2, thick=2, color='lightseagreen'),
+    Infinite(n=1, mua=0., mus=0., order=0, num=0, color='cyan', detect='impinge'),
+    Slab(n=1.4, mua=0, mus=10, order=1, num=1, phase=HG(g=0.8), top=0, thick=1e6, color='orange'),
     ]
 tissues.sort(key=lambda x: x.order, reverse=True)  # sort high to low
 
@@ -73,17 +81,18 @@ for _i in range(param['n_sim']):
             if p_l <= 2:
                 print('### PHOTON {} ###'.format(p_l+1))  # DEBUG
         ph = Photon()
-        ph.path.append(ph.coordinates.copy())  # starting position
-        ph.angles.append(ph.direction.copy())  # starting direction
         # Detect initial layer and outer layer
         ph.coordinates -= np.array([0, 0, 1e-3])  # move slightly up    
         current_layer_id = ph.find_layer(tissues)
         ph.coordinates += np.array([0, 0, 1e-3])  # restore initial coordinates
         incident_layer_id = ph.find_layer(tissues)
-        
         current_layer = tissues[current_layer_id]
-        ph.layers.append(current_layer.number)  # DEBUG, save current layer
         incident_layer = tissues[incident_layer_id]
+        
+        if not param['lowmem']:
+            ph.path.append(ph.coordinates.copy())  # starting position
+            ph.angles.append(ph.direction.copy())  # starting direction
+            ph.layers.append(current_layer.number)  # DEBUG, save current layer
         
         ph.spec = ph.specular(current_layer, incident_layer)  # specular reflection
         current_layer = incident_layer  # move inside first layer
@@ -121,8 +130,9 @@ for _i in range(param['n_sim']):
                     if p_l <= 2:
                         print('coord: {}, dir: {}, w: {:.3f}, layer: {}'.format(
                             ph.coordinates, ph.direction, ph.weigth, current_layer.number))  # DEBUG
-                ph.path.append(ph.coordinates.copy())  # add to path
-                ph.layers.append(current_layer.number)  # DEBUG, save current layer
+                if not param['lowmem']:
+                    ph.path.append(ph.coordinates.copy())  # add to path
+                    ph.layers.append(current_layer.number)  # DEBUG, save current layer
                 dw = ph.absorb(current_layer)  # update weigth
                 if dw > 1e-6:  # only save if absorption is happening
                     absorbed.append(np.concatenate([ph.coordinates.copy(),[dw]]))  # save absorbed
@@ -131,7 +141,8 @@ for _i in range(param['n_sim']):
                     ph.roulette(param['roulette_weigth'])  # kill the photon or increase weigth
                 else:
                     ph.scatter(current_layer)  # change direction
-                    ph.angles.append(ph.direction.copy())
+                    if not param['lowmem']:
+                        ph.angles.append(ph.direction.copy())
                     ph.scatters += 1
                 
             else:  # Crossed boundary
@@ -139,19 +150,22 @@ for _i in range(param['n_sim']):
                 ph.coordinates += dist*ph.direction  # move photon to boundary
                 # DEBUG
                 if ph.coordinates[-1] < -1e-10 or ph.coordinates[-1] > 4+1e-10:  # if escapes in air
-                    import pdb; pdb.set_trace()
+                    # import pdb; pdb.set_trace()
                     ph.find_layer(tissues)
                 ph.pathlength += dist
                 if param['debug']:
                     if p_l <= 2:
                         print('coord: {}, dir: {}, w: {:.3f}, layer: {}'.format(
                             ph.coordinates, ph.direction, ph.weigth, current_layer.number))  # DEBUG
-                ph.path.append(ph.coordinates.copy())  # add to path
-                ph.layers.append(current_layer.number)  # DEBUG, save current layer
+                if not param['lowmem']:
+                    ph.path.append(ph.coordinates.copy())  # add to path
+                    ph.layers.append(current_layer.number)  # DEBUG, save current layer
                 # DEBUG
-                # import pdb; pdb.set_trace()
+                # if incident_layer.detect:
+                #     import pdb; pdb.set_trace()
                 mode = ph.fresnel(current_layer, incident_layer)  # transmit or reflect and update direction
-                ph.angles.append(ph.direction.copy())  # add to angles
+                if not param['lowmem']:
+                    ph.angles.append(ph.direction.copy())  # add to angles
                 
                 # dw = ph.absorb(current_layer)  # update weigth
                 # if dw > 1e-6:  # only save if absorption is happening
@@ -224,8 +238,8 @@ for _i in range(param['n_sim']):
 print(r'Average time: {:.2f}+/-{:.2f} s'.format(np.mean(times), np.std(times)))
 
 gg = Geometries(tissues)
-ax = gg.showGeometry(xlim=[-12, 12], zlim=[-.5, 5])
-gg.showPaths(ax, detected, N=500, linewidth=0.2, alpha=1)
+ax = gg.showGeometry(xlim=[-100, 100], zlim=[-.5, 100])
+gg.showPaths(ax, detected, N=500, linewidth=0.1, alpha=1)
 # gg.animatePath(ax[0], detected, N=100, M=50, linewidth=0.5)
 # gg.paths_3d(detected, N=1000, xlim=[-2,2], ylim=[-2,2], zlim=[-1,2], alpha=0.3)
 # asd = gg.showAbsorbed(absorbed, xlim=[-5,5], zlim=[-3,5], res=0.1)

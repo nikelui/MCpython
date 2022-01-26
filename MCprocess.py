@@ -13,7 +13,7 @@ from datetime import datetime
 from MCphoton import Photon
 from matplotlib import pyplot as plt
 
-path = './model3bis'
+path = './whitemc2'
 
 # Total reflectance / transmittance
 tot_refl = []
@@ -24,7 +24,7 @@ unscattered = []  # unscattered transmittance
 radial_refl = []
 radial_trans = []
 r_step = 0.1  # mm
-r_detect = np.arange(0, 10, r_step)  # radial detector
+r_detect = np.arange(0, 100, r_step)  # radial detector
 A_detect = np.diff(np.pi * r_detect**2)  # Areas of the ring detectors to normalize
 r_detect = r_detect[1:]  # remove zero
 
@@ -109,7 +109,7 @@ fig, ax = plt.subplots(nrows=1, ncols=2, num=1, figsize=(10,4))
 ax[0].plot(r_detect, np.mean(radial_refl, axis=0)/n_emitted, 'x')
 ax[0].set_title('Reflectance')
 ax[0].set_xlabel('mm')
-ax[0].set_xlim([0, 5])
+# ax[0].set_xlim([0, 5])
 ax[0].set_ylim([1e-4, 1])
 ax[0].set_yscale('log')
 ax[0].grid(True, which='both', linestyle=':')
@@ -119,7 +119,7 @@ if np.mean(tot_trans) > 0:
     ax[1].plot(r_detect, np.mean(radial_trans, axis=0)/n_emitted, 'x')
     ax[1].set_title('Transmittance')
     ax[1].set_xlabel('mm')
-    ax[1].set_xlim([0, 5])
+    # ax[1].set_xlim([0, 5])
     ax[1].set_ylim([1e-4, 1e-2])
     ax[1].set_yscale('log')
     ax[1].grid(True, which='both', linestyle=':')

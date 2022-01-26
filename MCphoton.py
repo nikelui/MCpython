@@ -166,9 +166,9 @@ class Photon:
                 print('dir is None')  # DEBUG
             
             if tissue1.n <= tissue2.n:
-                new_dir = -k*norm + self.direction * tissue1.n/tissue2.n
-            else:
                 new_dir = k*norm + self.direction * tissue1.n/tissue2.n
+            else:
+                new_dir = -k*norm + self.direction * tissue1.n/tissue2.n
             # new_dir = k*norm + self.direction * tissue1.n/tissue2.n
             mode = 'transmit'
             

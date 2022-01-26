@@ -236,11 +236,11 @@ class Slab(Layer):
         #     norm = np.array([0,0,-1])
         # else:
         #     norm = None
-        norm = np.array([0,0,1])
-        # if ph.direction[2] > 0:
-        #     norm = np.array([0,0,1])
-        # else:
-        #     norm = np.array([0,0,-1])
+        # norm = np.array([0,0,1])
+        if ph.direction[2] > 0:
+            norm = np.array([0,0,-1])
+        else:
+            norm = np.array([0,0,1])
         return norm
     
     def intersect(self, photon):
