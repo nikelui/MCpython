@@ -13,7 +13,7 @@ from datetime import datetime
 from MCphoton import Photon
 from matplotlib import pyplot as plt
 
-path = './whitemc2'
+path = './whitemc'
 
 # Total reflectance / transmittance
 tot_refl = []
@@ -102,6 +102,7 @@ if np.mean(tot_trans) > 0:
                                                      np.std(tot_trans)/n_emitted *100))
     print(' |-- unscattered = {:.2f}%  std:{:.2f}%'.format(np.mean(unscattered)/n_emitted *100,
                                                      np.std(unscattered)/n_emitted *100))
+#%%
 # radial distribution
 fig, ax = plt.subplots(nrows=1, ncols=2, num=1, figsize=(10,4))
 # ax[0].errorbar(r_detect + r_step, np.mean(radial_refl, axis=0)/n_emitted,
@@ -109,7 +110,7 @@ fig, ax = plt.subplots(nrows=1, ncols=2, num=1, figsize=(10,4))
 ax[0].plot(r_detect, np.mean(radial_refl, axis=0)/n_emitted, 'x')
 ax[0].set_title('Reflectance')
 ax[0].set_xlabel('mm')
-# ax[0].set_xlim([0, 5])
+ax[0].set_xlim([0, 10])
 ax[0].set_ylim([1e-4, 1])
 ax[0].set_yscale('log')
 ax[0].grid(True, which='both', linestyle=':')

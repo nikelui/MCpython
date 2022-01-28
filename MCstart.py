@@ -18,15 +18,19 @@ import addcopyfighandler
 
 # TODO: read parameters and tissues from file
 param = {}
-param['photons_launched'] = 1e2
+param['photons_launched'] = 1e5
 param['photons_detected'] = 0
 param['weigth_threshold'] = 0.1
 param['roulette_weigth'] = 10
 param['n_sim'] = 10  # number of simulations (to perform statistics)
-param['save_path'] = './whitemc2'
-param['debug'] = False
+param['save_path'] = './whitemc'
+param['debug'] = True
 param['lowmem'] = True  # check for low-memory simulations (discard photon.path and photon.angles)
                         # note: this will break the GUI functions to show photon paths
+param['whitemc'] = True  # fix mua for white MC
+# param['mus_threshold'] = 50*np.arange(1,11)  # reset for each photon
+# param['roulette_mus'] = 10
+
 np.set_printoptions(precision=3)
 # Define tissue list
 ## model 1
@@ -49,7 +53,7 @@ np.set_printoptions(precision=3)
 ## whiteMC
 tissues = [
     Infinite(n=1, mua=0., mus=0., order=0, num=0, color='cyan', detect='impinge'),
-    Slab(n=1.4, mua=0, mus=10, order=1, num=1, phase=HG(g=0.8), top=0, thick=1e6, color='orange'),
+    Slab(n=1.4, mua=0.01, mus=1, order=1, num=1, phase=HG(g=0.8), top=0, thick=1e6, color='orange'),
     ]
 tissues.sort(key=lambda x: x.order, reverse=True)  # sort high to low
 
@@ -78,8 +82,8 @@ for _i in range(param['n_sim']):
         # First step
         p_l += 1  # increase photon counter
         if param['debug']:
-            if p_l <= 2:
-                print('### PHOTON {} ###'.format(p_l+1))  # DEBUG
+            if p_l % 1000 == 0:
+                print('### PHOTON {} of {} ###'.format(p_l, int(param['photons_launched'])))  # DEBUG
         ph = Photon()
         # Detect initial layer and outer layer
         ph.coordinates -= np.array([0, 0, 1e-3])  # move slightly up    
@@ -126,10 +130,10 @@ for _i in range(param['n_sim']):
                 ph.pathlength += ph.step_size  # increase pathlength
                 ph.step_size = 0  # reset step
                 # DEBUG
-                if param['debug']:
-                    if p_l <= 2:
-                        print('coord: {}, dir: {}, w: {:.3f}, layer: {}'.format(
-                            ph.coordinates, ph.direction, ph.weigth, current_layer.number))  # DEBUG
+                # if param['debug']:
+                #     if p_l <= 2:
+                #         print('coord: {}, dir: {}, w: {:.3f}, layer: {}'.format(
+                #             ph.coordinates, ph.direction, ph.weigth, current_layer.number))  # DEBUG
                 if not param['lowmem']:
                     ph.path.append(ph.coordinates.copy())  # add to path
                     ph.layers.append(current_layer.number)  # DEBUG, save current layer
@@ -139,6 +143,11 @@ for _i in range(param['n_sim']):
                 
                 if ph.weigth < param['weigth_threshold']:
                     ph.roulette(param['roulette_weigth'])  # kill the photon or increase weigth
+                # # If pathlength is too long
+                # elif ph.pathlength > param['mus_threshold'][ph.roulette_step]:
+                #     ph.roulette(param['mus_threshold'][ph.roulette_step])
+                #     if not ph.dead:  # increase threshold and photon weigth
+                #         ph.roulette_step += 1
                 else:
                     ph.scatter(current_layer)  # change direction
                     if not param['lowmem']:
@@ -153,10 +162,10 @@ for _i in range(param['n_sim']):
                     # import pdb; pdb.set_trace()
                     ph.find_layer(tissues)
                 ph.pathlength += dist
-                if param['debug']:
-                    if p_l <= 2:
-                        print('coord: {}, dir: {}, w: {:.3f}, layer: {}'.format(
-                            ph.coordinates, ph.direction, ph.weigth, current_layer.number))  # DEBUG
+                # if param['debug']:
+                #     if p_l <= 2:
+                #         print('coord: {}, dir: {}, w: {:.3f}, layer: {}'.format(
+                #             ph.coordinates, ph.direction, ph.weigth, current_layer.number))  # DEBUG
                 if not param['lowmem']:
                     ph.path.append(ph.coordinates.copy())  # add to path
                     ph.layers.append(current_layer.number)  # DEBUG, save current layer
@@ -179,6 +188,8 @@ for _i in range(param['n_sim']):
                     incident_layer = None
                 elif mode == 'transmit':
                     if incident_layer.detect:
+                        if param['whitemc']:  # restore weigth
+                            ph.weigth /= np.exp(ph.pathlength * current_layer.mua)
                         ph.dead = True
                         p_d += 1
                         ph.detected = True  # photon is detected

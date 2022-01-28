@@ -23,6 +23,7 @@ class Photon:
         self.scatters = 0  # number of scattering events
         self.path = []  # to store photon path
         self.pathlength = 0  # to store total pathlength
+        self.roulette_step = 0  # tracker for pathlength roulette
         self.angles = []  # to store scattering directions
         self.layers = []  # DEBUG to store current layer index
         
@@ -179,7 +180,7 @@ class Photon:
         
     def roulette(self, r=10):
         """
-        Randomly terminate photons if weigth is small enough.
+        Randomly terminate photons if weigth is small enough or pathlength is long enough.
 
         Parameters
         ----------    
