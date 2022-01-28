@@ -33,7 +33,7 @@ param['whitemc'] = True  # fix mua for white MC
 
 np.set_printoptions(precision=3)
 # Define tissue list
-## model 1
+# ## model 1
 # tissues = [
 #     Infinite(n=1, mua=0., mus=0., order=0, num=0, color='cyan', detect='impinge'),
 #     Slab(n=1, mua=1, mus=9, order=1, num=1, phase=HG(g=.75), top=0, thick=0.2, color='orange'),
@@ -55,6 +55,10 @@ tissues = [
     Infinite(n=1, mua=0., mus=0., order=0, num=0, color='cyan', detect='impinge'),
     Slab(n=1.4, mua=0.01, mus=1, order=1, num=1, phase=HG(g=0.8), top=0, thick=1e6, color='orange'),
     ]
+# Expected values
+# Gardner et al.   23.81%   9.74%
+# mcml             23.75%   9.65%
+
 tissues.sort(key=lambda x: x.order, reverse=True)  # sort high to low
 
 times = []  # DEBUG
@@ -249,11 +253,11 @@ for _i in range(param['n_sim']):
 print(r'Average time: {:.2f}+/-{:.2f} s'.format(np.mean(times), np.std(times)))
 
 gg = Geometries(tissues)
-ax = gg.showGeometry(xlim=[-100, 100], zlim=[-.5, 100])
-gg.showPaths(ax, detected, N=500, linewidth=0.1, alpha=1)
+ax = gg.showGeometry(xlim=[-8, 8], zlim=[-0.5, 5])
+gg.showPaths(ax, detected, N=1000, linewidth=0.2, alpha=0.5)
 # gg.animatePath(ax[0], detected, N=100, M=50, linewidth=0.5)
 # gg.paths_3d(detected, N=1000, xlim=[-2,2], ylim=[-2,2], zlim=[-1,2], alpha=0.3)
-# asd = gg.showAbsorbed(absorbed, xlim=[-5,5], zlim=[-3,5], res=0.1)
+# asd = gg.showAbsorbed(absorbed, xlim=[-2,2], zlim=[-.1,2], res=0.05)
 
 #%%
 ## DEBUG

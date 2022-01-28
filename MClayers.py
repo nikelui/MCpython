@@ -160,7 +160,7 @@ class Slab(Layer):
             True if the point is contained in the tissue layer, False otherwise.
         """
         x,y,z = coord  # unpack coordinates
-        if (self.top + self.thickness) >= z >= self.top:  # only need to check z
+        if (self.top + self.thickness - z) >= 1e-6 and (self.top - z) <= 1e-6:  # added tolerance
             return True
         else:
             return False

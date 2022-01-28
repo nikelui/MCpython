@@ -53,7 +53,7 @@ for _i, file in enumerate(os.listdir(path)):
         angular_r = np.zeros(len(a_detect))
         angular_t = np.zeros(len(a_detect))
         for photon in dataset:
-            tot_r += photon.spec  # add specular reflection
+            # tot_r += photon.spec  # add specular reflection
             if photon.detected:  # only process if detected
                 if -1e-10 < photon.coordinates[2] < 1e-10:  # allow tolerance
                     tot_r += photon.weigth  # reflected to the surface
